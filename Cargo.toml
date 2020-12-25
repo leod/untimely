@@ -1,5 +1,5 @@
 [package]
-name = "chrona"
+name = "untimely"
 version = "0.1.0"
 authors = ["leod <subtle.frustration@proton.me>"]
 edition = "2018"
