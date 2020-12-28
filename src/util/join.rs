@@ -80,6 +80,18 @@ pub enum Item<K, T, U> {
     Both(K, T, U),
 }
 
+impl<K, T, U> Item<K, T, U> {
+    /// Convert the item into a triplet consisting of the key and two
+    /// [`Option`](Option)s.
+    pub fn into_options(self) -> (K, Option<T>, Option<U>) {
+        match self {
+            Item::Left(k, t) => (k, Some(t), None),
+            Item::Right(k, u) => (k, None, Some(u)),
+            Item::Both(k, t, u) => (k, Some(t), Some(u)),
+        }
+    }
+}
+
 /// Iterator over the [full join](full_join) of two sorted iterators of
 /// key-value pairs.
 ///
