@@ -1,7 +1,5 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+mod tick_stream;
+
+pub mod util;
+
+pub use tick_stream::{ClientTickStream, ServerTickStream, TickNum};
