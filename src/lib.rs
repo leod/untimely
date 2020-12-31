@@ -1,5 +1,8 @@
-mod tick_stream;
+mod clock;
+mod tick_buffer;
 
 pub mod util;
 
-pub use tick_stream::{ClientTickStream, ServerTickStream, TickNum};
+//pub use tick_buffer::{ClientTickBuffer, ServerTickBuffer, TickNum};
+
+pub use clock::{GameTime, LocalTime, TimeMapping};
