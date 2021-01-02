@@ -46,7 +46,8 @@ impl Profile {
         start_local_time: LocalTime,
         start_tick_num: TickNum,
     ) -> Vec<(LocalTime, TickNum)> {
-        self.receive_latency_distr()
+        let mut receive_times: Vec<_> = self
+            .receive_latency_distr()
             .sample_iter(rand::thread_rng())
             .take(num_ticks)
             .enumerate()
@@ -57,7 +58,13 @@ impl Profile {
                 (LocalTime(local_time), tick_num)
             })
             .filter(|_| rand::thread_rng().gen::<f64>() >= self.receive_loss)
-            .collect()
+            .collect();
+
+        // Due to the receive jitter, it can happen that we receive ticks out
+        // of order. We re-sort here, so that the events are ordered by the
+        // client's local time.
+        receive_times.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap());
+        receive_times
     }
 }
 
@@ -98,10 +105,13 @@ fn plot_tick_receive_times(profile: &Profile, receive_times: &[(LocalTime, TickN
 
     let mut fg = Figure::new();
     fg.axes2d()
-        .set_title("Local time vs. time in client's incoming tick stream", &[])
+        .set_title(
+            "Local client time vs. game time in client's incoming tick stream",
+            &[],
+        )
         .set_legend(Graph(0.5), Graph(0.9), &[], &[])
-        .set_x_label("client local time", &[])
-        .set_y_label("client receive tick game time", &[])
+        .set_x_label("local time", &[])
+        .set_y_label("game time", &[])
         .lines(x.as_slice(), y.as_slice(), &[Caption(profile.name)]);
     fg.show().unwrap();
 }
