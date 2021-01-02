@@ -2,11 +2,21 @@ use std::collections::VecDeque;
 
 use pareen::{simple_linear_regression, Anim, Fun};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct GameTime(f64);
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct LocalTime(f64);
+
+impl LocalTime {
+    pub fn from_secs(secs: f64) -> Self {
+        LocalTime(secs)
+    }
+
+    pub fn into_secs(self) -> f64 {
+        self.secs
+    }
+}
 
 impl From<f64> for GameTime {
     fn from(t: f64) -> Self {
