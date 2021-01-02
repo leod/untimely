@@ -3,10 +3,10 @@ use std::collections::VecDeque;
 use pareen::{simple_linear_regression, Anim, Fun};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct GameTime(f64);
+pub struct GameTime(pub f64);
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct LocalTime(f64);
+pub struct LocalTime(pub f64);
 
 impl LocalTime {
     pub fn from_secs(secs: f64) -> Self {
@@ -14,7 +14,7 @@ impl LocalTime {
     }
 
     pub fn into_secs(self) -> f64 {
-        self.secs
+        self.0
     }
 }
 
