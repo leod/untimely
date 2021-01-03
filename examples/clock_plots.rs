@@ -3,7 +3,10 @@ use rand_distr::{Distribution, Normal};
 
 use gnuplot::{AutoOption, AxesCommon, Caption, Figure, Graph};
 
-use untimely::{GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta};
+use untimely::{
+    GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta, TimeMapping,
+    TimeMappingConfig,
+};
 
 struct ConnectionProfile {
     name: &'static str,

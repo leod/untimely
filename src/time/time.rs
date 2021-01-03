@@ -100,6 +100,12 @@ macro_rules! impl_time_type {
             }
         }
 
+        impl std::ops::AddAssign<$delta> for $time {
+            fn add_assign(&mut self, other: $delta) {
+                *self = *self + other;
+            }
+        }
+
         impl std::ops::Sub<$delta> for $time {
             type Output = Self;
 

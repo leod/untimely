@@ -41,6 +41,17 @@ impl<Src, Tgt> TimeMapping<Src, Tgt> {
 impl<Src, Tgt> TimeMapping<Src, Tgt>
 where
     Src: Into<f64> + Clone,
+    Tgt: Into<f64> + Clone,
+    f64: Into<Tgt>,
+{
+    pub fn eval(&self, t: Src) -> Option<Tgt> {
+        Fun::eval(self, t)
+    }
+}
+
+impl<Src, Tgt> TimeMapping<Src, Tgt>
+where
+    Src: Into<f64> + Clone,
 {
     pub fn prune_evidence_older_than(&mut self, min_src_time: Src) {
         let min_src_time = min_src_time.into();
