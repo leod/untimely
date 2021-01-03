@@ -2,10 +2,12 @@ use std::collections::VecDeque;
 
 use pareen::{simple_linear_regression, Fun};
 
+#[derive(Debug, Clone)]
 pub struct TimeMappingConfig {
     pub max_evidence_len: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct TimeMapping<Src, Tgt> {
     config: TimeMappingConfig,
     evidence: VecDeque<(Src, Tgt)>,

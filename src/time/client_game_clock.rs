@@ -5,9 +5,11 @@ use crate::{
 pub trait ClientGameClock {
     fn record_receive_event(&mut self, local_time: LocalTime, received_tick_num: TickNum);
     fn advance_local_time(&mut self, local_time_delta: LocalTimeDelta);
+    fn get_predicted_receive_game_time(&self) -> GameTime;
     fn get_game_time(&self) -> GameTime;
 }
 
+#[derive(Debug, Clone)]
 pub struct DelayedTimeMappingClock {
     tick_time_delta: GameTimeDelta,
     game_time_delay: GameTimeDelta,
@@ -42,11 +44,13 @@ impl ClientGameClock for DelayedTimeMappingClock {
         self.current_local_time += local_time_delta;
     }
 
-    fn get_game_time(&self) -> GameTime {
+    fn get_predicted_receive_game_time(&self) -> GameTime {
         self.time_mapping
             .eval(self.current_local_time)
-            .map_or(GameTime::ZERO, |receive_game_time| {
-                receive_game_time - self.game_time_delay
-            })
+            .unwrap_or(GameTime::ZERO)
+    }
+
+    fn get_game_time(&self) -> GameTime {
+        self.get_predicted_receive_game_time() - self.game_time_delay
     }
 }

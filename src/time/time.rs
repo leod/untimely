@@ -1,9 +1,9 @@
 macro_rules! impl_time_type {
     ($time:ident, $delta:ident) => {
-        #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+        #[derive(Default, Debug, Clone, Copy, PartialEq, PartialOrd)]
         pub struct $delta(f64);
 
-        #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+        #[derive(Default, Debug, Clone, Copy, PartialEq, PartialOrd)]
         pub struct $time($delta);
 
         impl $delta {
@@ -32,6 +32,14 @@ macro_rules! impl_time_type {
 
             pub fn to_millis(self) -> f64 {
                 self.0 * 1000.0
+            }
+
+            pub fn min(self, other: Self) -> Self {
+                $delta(self.0.max(other.0))
+            }
+
+            pub fn max(self, other: Self) -> Self {
+                $delta(self.0.max(other.0))
             }
         }
 
@@ -64,6 +72,14 @@ macro_rules! impl_time_type {
 
             pub fn to_delta(self) -> $delta {
                 self.0
+            }
+
+            pub fn min(self, other: Self) -> Self {
+                $time(self.0.max(other.0))
+            }
+
+            pub fn max(self, other: Self) -> Self {
+                $time(self.0.max(other.0))
             }
         }
 
@@ -134,7 +150,7 @@ macro_rules! impl_time_type {
             type Output = $delta;
 
             fn add(self, other: $delta) -> Self {
-                $delta(self.0 - other.0)
+                $delta(self.0 + other.0)
             }
         }
 

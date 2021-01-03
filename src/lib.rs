@@ -1,5 +1,5 @@
 mod tick_buffer;
-mod time;
+pub mod time;
 
 pub mod util;
 
