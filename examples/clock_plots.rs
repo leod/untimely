@@ -187,7 +187,7 @@ pub fn simulate<Clock: ClientGameClock>(
     }
 }
 
-fn plot_simulation_output(output: &SimulationOutput, clock_name: &str) {
+fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bool) {
     let mut fg = Figure::new();
     let axes = fg.axes2d();
 
@@ -202,44 +202,59 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str) {
     .set_x_label("client's local time [s]", &[])
     .set_y_label("game time [s]", &[]);
 
-    let local_time: Vec<f64> = output
+    let time_shift = |frame: &SimulationFrame| {
+        if shift {
+            f64::from(frame.local_time)
+        } else {
+            0.0
+        }
+    };
+
+    let client_local_time: Vec<_> = output
         .frames
         .iter()
-        .map(|frame| frame.local_time.into())
+        .map(|frame| f64::from(frame.local_time))
         .collect();
-    let game_time: Vec<f64> = output
+
+    let server_local_time: Vec<_> = output
         .frames
         .iter()
-        .map(|frame| frame.game_time.into())
+        .map(|frame| f64::from(frame.local_time) - time_shift(frame))
         .collect();
-    let max_received_game_time: Vec<f64> = output
+
+    let game_time: Vec<_> = output
         .frames
         .iter()
-        .map(|frame| frame.max_received_game_time.into())
+        .map(|frame| f64::from(frame.game_time) - time_shift(frame))
         .collect();
-    let predicted_receive_game_time: Vec<f64> = output
+    let max_received_game_time: Vec<_> = output
         .frames
         .iter()
-        .map(|frame| frame.predicted_receive_game_time.into())
+        .map(|frame| f64::from(frame.max_received_game_time) - time_shift(frame))
+        .collect();
+    let predicted_receive_game_time: Vec<_> = output
+        .frames
+        .iter()
+        .map(|frame| f64::from(frame.predicted_receive_game_time) - time_shift(frame))
         .collect();
 
     axes.lines(
-        local_time.as_slice(),
-        local_time.as_slice(),
+        client_local_time.as_slice(),
+        server_local_time.as_slice(),
         &[Caption("server game time")],
     );
     axes.lines(
-        local_time.as_slice(),
+        client_local_time.as_slice(),
         game_time.as_slice(),
         &[Caption("client game time")],
     );
     axes.lines(
-        local_time.as_slice(),
+        client_local_time.as_slice(),
         max_received_game_time.as_slice(),
         &[Caption("max received game time")],
     );
     axes.lines(
-        local_time.as_slice(),
+        client_local_time.as_slice(),
         predicted_receive_game_time.as_slice(),
         &[Caption("predicted receive game time")],
     );
@@ -311,7 +326,7 @@ fn main() {
             tick_time_delta,
             game_time_delay,
             TimeMappingConfig {
-                max_evidence_len: 32,
+                max_evidence_len: 8,
             },
         );
         let num_ticks = 256;
@@ -322,7 +337,8 @@ fn main() {
             tick_time_delta,
             num_ticks,
         );
-        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock");
+        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
+        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
     }
 
     /*plot_receive_latencies(
