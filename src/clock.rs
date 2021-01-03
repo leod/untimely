@@ -42,22 +42,37 @@ impl From<LocalTime> for f64 {
     }
 }
 
+pub struct TimeMappingConfig {
+    pub max_evidence_len: usize,
+}
+
 pub struct TimeMapping<Src, Tgt> {
-    max_evidence_len: usize,
+    config: TimeMappingConfig,
     evidence: VecDeque<(Src, Tgt)>,
 }
 
 impl<Src, Tgt> TimeMapping<Src, Tgt> {
-    pub fn new(max_evidence_len: usize) -> Self {
+    pub fn new(config: TimeMappingConfig) -> Self {
         TimeMapping {
-            max_evidence_len,
+            config,
             evidence: VecDeque::new(),
         }
     }
 
+    pub fn from_evidence<I>(config: TimeMappingConfig, evidence: I) -> Self
+    where
+        I: IntoIterator<Item = (Src, Tgt)>,
+    {
+        let mut mapping = Self::new(config);
+        for (src_time, tgt_time) in evidence {
+            mapping.record_evidence(src_time, tgt_time);
+        }
+        mapping
+    }
+
     pub fn record_evidence(&mut self, src_time: Src, tgt_time: Tgt) {
         self.evidence.push_back((src_time, tgt_time));
-        if self.evidence.len() > self.max_evidence_len {
+        if self.evidence.len() > self.config.max_evidence_len {
             self.evidence.pop_front();
         }
     }

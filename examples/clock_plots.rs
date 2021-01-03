@@ -72,7 +72,7 @@ fn plot_receive_latencies(profiles: &[&Profile], n: usize) {
     let x: Vec<f64> = (0..n).map(|n| n as f64).collect();
 
     let mut fg = Figure::new();
-    let mut axes = fg.axes2d();
+    let axes = fg.axes2d();
     axes.set_title(
         "Samples drawn from client's receive latency distribution",
         &[],
