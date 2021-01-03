@@ -1,7 +1,10 @@
-mod clock;
 mod tick_buffer;
+mod time;
 
 pub mod util;
 
-pub use clock::{GameTime, LocalTime, TimeMapping, TimeMappingConfig};
-pub use tick_buffer::{ReceiverTickBuffer, SenderTickBuffer, TickNum};
+pub use tick_buffer::{ReceiverTickBuffer, SenderTickBuffer};
+pub use time::{
+    GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta, TimeMapping,
+    TimeMappingConfig,
+};

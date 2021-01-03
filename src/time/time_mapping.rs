@@ -1,46 +1,6 @@
 use std::collections::VecDeque;
 
-use pareen::{simple_linear_regression, Anim, Fun};
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct GameTime(pub f64);
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct LocalTime(pub f64);
-
-impl LocalTime {
-    pub fn from_secs(secs: f64) -> Self {
-        LocalTime(secs)
-    }
-
-    pub fn into_secs(self) -> f64 {
-        self.0
-    }
-}
-
-impl From<f64> for GameTime {
-    fn from(t: f64) -> Self {
-        GameTime(t)
-    }
-}
-
-impl From<f64> for LocalTime {
-    fn from(t: f64) -> Self {
-        LocalTime(t)
-    }
-}
-
-impl From<GameTime> for f64 {
-    fn from(t: GameTime) -> Self {
-        t.0
-    }
-}
-
-impl From<LocalTime> for f64 {
-    fn from(t: LocalTime) -> Self {
-        t.0
-    }
-}
+use pareen::{simple_linear_regression, Fun};
 
 pub struct TimeMappingConfig {
     pub max_evidence_len: usize,
@@ -111,5 +71,3 @@ where
         }
     }
 }
-
-pub struct PlaybackClock {}

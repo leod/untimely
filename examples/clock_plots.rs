@@ -3,7 +3,7 @@ use rand_distr::{Distribution, Normal};
 
 use gnuplot::{AutoOption, AxesCommon, Caption, Figure, Graph};
 
-use untimely::{LocalTime, TickNum};
+use untimely::{GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta};
 
 struct ConnectionProfile {
     name: &'static str,
@@ -40,7 +40,7 @@ impl ConnectionProfile {
     fn sample_tick_receive_times(
         &self,
         num_ticks: usize,
-        tick_duration_secs: f64,
+        tick_time_delta: GameTimeDelta,
         start_local_time: LocalTime,
         start_tick_num: TickNum,
     ) -> Vec<(LocalTime, TickNum)> {
@@ -49,11 +49,19 @@ impl ConnectionProfile {
             .sample_iter(rand::thread_rng())
             .take(num_ticks)
             .enumerate()
-            .map(|(tick_num_offset, receive_latency)| {
-                let tick_num = TickNum(start_tick_num.0 + tick_num_offset as u32);
-                let game_time = tick_num.0 as f64 * tick_duration_secs;
-                let local_time = start_local_time.0 + game_time + receive_latency / 1000.0;
-                (LocalTime(local_time), tick_num)
+            .map(|(tick_num_delta, receive_latency)| {
+                let tick_num_delta = TickNumDelta::from(tick_num_delta);
+                let tick_num = start_tick_num + tick_num_delta;
+
+                // NOTE: We assume here that the server performs and sends ticks
+                // with a perfectly constant period. Further, we assume that
+                // GameTime progresses at the same speed as LocalTime.
+                let game_time_delta = tick_num_delta.to_game_time_delta(tick_time_delta);
+                let local_time_delta = LocalTimeDelta::from_secs(game_time_delta.to_secs());
+                let local_time = start_local_time + local_time_delta;
+                let local_arrival_time = local_time + LocalTimeDelta::from_millis(receive_latency);
+
+                (local_arrival_time, tick_num)
             })
             .filter(|_| rand::thread_rng().gen::<f64>() >= self.receive_loss)
             .collect();
@@ -94,15 +102,15 @@ fn plot_receive_latencies(profiles: &[&ConnectionProfile], n: usize) {
 fn plot_tick_receive_times(
     profile: &ConnectionProfile,
     receive_times: &[(LocalTime, TickNum)],
-    tick_duration_secs: f64,
+    tick_time_delta: GameTimeDelta,
 ) {
     let x: Vec<f64> = receive_times
         .iter()
-        .map(|(local_time, _)| local_time.0)
+        .map(|(local_time, _)| local_time.to_secs_since_start())
         .collect();
     let y: Vec<f64> = receive_times
         .iter()
-        .map(|(_, tick_num)| tick_num.0 as f64 * tick_duration_secs)
+        .map(|(_, tick_num)| tick_num.to_game_time(tick_time_delta).to_secs_since_start())
         .collect();
 
     let mut fg = Figure::new();
@@ -119,7 +127,7 @@ fn plot_tick_receive_times(
 }
 
 fn main() {
-    let tick_duration_secs = 1.0 / 20.0;
+    let tick_time_delta = GameTimeDelta::from_secs(1.0 / 20.0);
 
     plot_receive_latencies(
         &[&ConnectionProfile::GREAT, &ConnectionProfile::OKAYISH],
@@ -128,13 +136,13 @@ fn main() {
 
     let tick_receive_times = ConnectionProfile::OKAYISH.sample_tick_receive_times(
         30,
-        tick_duration_secs,
-        LocalTime(0.0),
-        TickNum(0),
+        tick_time_delta,
+        LocalTime::ZERO,
+        TickNum::ZERO,
     );
     plot_tick_receive_times(
         &ConnectionProfile::OKAYISH,
         &tick_receive_times,
-        tick_duration_secs,
+        tick_time_delta,
     );
 }

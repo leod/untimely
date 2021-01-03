@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TickNum(pub u32);
+use crate::time::TickNum;
 
 pub struct SenderTickBuffer<T> {
     last_client_ack_num: Option<TickNum>,
