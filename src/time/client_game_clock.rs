@@ -29,10 +29,10 @@ pub enum TimeWarpFunction {
 }
 
 impl TimeWarpFunction {
-    pub fn eval(&self, t: GameTimeDelta) -> f64 {
+    pub fn eval(&mut self, t: GameTimeDelta) -> f64 {
         match self {
             TimeWarpFunction::Sigmoid { alpha, power } => {
-                let exponent = -alpha * t.to_secs().powi(*power);
+                let exponent = -*alpha * t.to_secs().powi(*power);
                 0.5 + 1.0 / (1.0 + exponent.exp())
             }
             TimeWarpFunction::Catcheb => {
@@ -78,6 +78,7 @@ impl ClientGameClock for DelayedTimeMappingClock {
         self.current_game_time += local_time_delta.to_game_time_delta() * warp_factor;
         self.current_local_time += local_time_delta;
 
+        self.time_mapping.update(self.current_local_time);
         self.current_predicted_receive_game_time = self
             .time_mapping
             .eval(self.current_local_time)

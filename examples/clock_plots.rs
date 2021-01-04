@@ -31,6 +31,13 @@ impl ConnectionProfile {
         receive_loss: 0.0,
     };
 
+    pub const OKAY: ConnectionProfile = ConnectionProfile {
+        name: "okay connection",
+        receive_latency_mean_millis: 60.0,
+        receive_latency_std_dev: 10.0,
+        receive_loss: 0.01,
+    };
+
     pub const OKAYISH: ConnectionProfile = ConnectionProfile {
         name: "okayish connection",
         receive_latency_mean_millis: 100.0,
@@ -153,7 +160,7 @@ pub fn simulate<Clock: ClientGameClock>(
     tick_time_delta: GameTimeDelta,
     num_ticks: usize,
 ) -> SimulationOutput {
-    let mut receive_times = connection_profile.sample_tick_receive_times(
+    let receive_times = connection_profile.sample_tick_receive_times(
         num_ticks,
         tick_time_delta,
         LocalTime::ZERO,
@@ -162,24 +169,25 @@ pub fn simulate<Clock: ClientGameClock>(
 
     // Sort by receive time *decreasing*, so that we can pop the earliest events
     // from the back.
-    receive_times.reverse();
+    let mut receive_times_reverse = receive_times.clone();
+    receive_times_reverse.reverse();
 
     let mut frames = Vec::new();
     let mut frame = SimulationFrame::default();
 
     loop {
-        if receive_times.is_empty() {
+        if receive_times_reverse.is_empty() {
             break;
         }
 
         // Check for the next received ticks.
-        while let Some((receive_time, received_tick_num)) = receive_times.last().copied() {
+        while let Some((receive_time, received_tick_num)) = receive_times_reverse.last().copied() {
             if receive_time > frame.local_time {
                 // We haven't received this tick yet.
                 break;
             }
 
-            receive_times.pop();
+            receive_times_reverse.pop();
             let received_game_time = received_tick_num.to_game_time(tick_time_delta);
             frame.max_received_game_time = frame.max_received_game_time.max(received_game_time);
 
@@ -201,9 +209,6 @@ pub fn simulate<Clock: ClientGameClock>(
         frame.local_time += frame.local_time_delta;
         clock.advance_local_time(frame.local_time_delta);
     }
-
-    // Restore original receive times for output...
-    receive_times.reverse();
 
     SimulationOutput {
         connection_profile: connection_profile.clone(),
@@ -274,6 +279,27 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
         .iter()
         .map(|frame| f64::from(frame.predicted_receive_game_time) - time_shift(frame))
         .collect();
+    let time_delay: Vec<_> = output
+        .frames
+        .iter()
+        .map(|frame| f64::from(frame.game_time) - f64::from(frame.predicted_receive_game_time))
+        .collect();
+
+    let receive_time_local: Vec<f64> = output
+        .receive_times
+        .iter()
+        .map(|(local_time, _)| local_time.to_secs_since_start())
+        .collect();
+    let receive_time_game: Vec<f64> = output
+        .receive_times
+        .iter()
+        .map(|(local_time, tick_num)| {
+            tick_num
+                .to_game_time(output.tick_time_delta)
+                .to_secs_since_start()
+                - if shift { f64::from(*local_time) } else { 0.0 }
+        })
+        .collect();
 
     axes.lines(
         client_local_time.as_slice(),
@@ -299,6 +325,16 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
         client_local_time.as_slice(),
         max_received_game_time.as_slice(),
         &[Caption("max received game time")],
+    );
+    axes.lines_points(
+        receive_time_local.as_slice(),
+        receive_time_game.as_slice(),
+        &[Caption("received game time")],
+    );
+    axes.lines_points(
+        client_local_time.as_slice(),
+        time_delay.as_slice(),
+        &[Caption("time delay")],
     );
 
     fg.show().unwrap();
@@ -375,30 +411,30 @@ fn main() {
             game_time_delay,
             time_warp_function,
             TimeMappingConfig {
-                max_evidence_len: 16,
+                max_evidence_len: 32,
                 tick_time_delta,
                 ignore_if_out_of_order: false,
+                ema_alpha: Some(0.5),
             },
         );
-        let num_ticks = 64;
+        let num_ticks = 128;
         let simulation_output = simulate(
             client_game_clock,
-            &ConnectionProfile::OKAYISH,
+            &ConnectionProfile::OKAY,
             &ClientProfile::SOLID_60HZ,
             tick_time_delta,
             num_ticks,
         );
         plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
-
         //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
     }
 
     /*plot_receive_latencies(
-        &[&ConnectionProfile::GREAT, &ConnectionProfile::OKAYISH, &ConnectionProfile::NO_VARIANCE],
+        &[&ConnectionProfile::NO_VARIANCE, &ConnectionProfile::GREAT, &ConnectionProfile::OKAY, &ConnectionProfile::OKAYISH],
         128,
-    );
+    );*/
 
-    {
+    /*{
         let tick_receive_times = ConnectionProfile::NO_VARIANCE.sample_tick_receive_times(
             30,
             tick_time_delta,

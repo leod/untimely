@@ -9,23 +9,27 @@ pub struct TimeMappingConfig {
     pub max_evidence_len: usize,
     pub tick_time_delta: GameTimeDelta,
     pub ignore_if_out_of_order: bool,
+    pub ema_alpha: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
 pub struct TimeMapping<Src, Tgt> {
     config: TimeMappingConfig,
     evidence: VecDeque<(Src, Tgt)>,
+    line: Option<pareen::stats::Line<f64>>,
 }
 
 impl<Src, Tgt> TimeMapping<Src, Tgt>
 where
-    Src: PartialOrd + Clone,
-    Tgt: PartialOrd + Clone,
+    Src: Into<f64> + PartialOrd + Clone,
+    Tgt: Into<f64> + PartialOrd + Clone,
+    f64: Into<Tgt>,
 {
     pub fn new(config: TimeMappingConfig) -> Self {
         TimeMapping {
             config,
             evidence: VecDeque::new(),
+            line: None,
         }
     }
 
@@ -58,27 +62,37 @@ where
             self.evidence.pop_front();
         }
     }
-}
 
-impl<Src, Tgt> TimeMapping<Src, Tgt>
-where
-    Src: Into<f64> + Clone,
-    Tgt: Into<f64> + Clone,
-    f64: Into<Tgt>,
-{
-    pub fn eval(&self, t: Src) -> Option<Tgt> {
-        Fun::eval(self, t)
-    }
-}
-
-impl<Src, Tgt> TimeMapping<Src, Tgt>
-where
-    Src: Into<f64> + Clone,
-{
-    pub fn prune_evidence_older_than(&mut self, min_src_time: Src) {
+    fn prune_evidence_older_than(&mut self, min_src_time: Src) {
         let min_src_time = min_src_time.into();
         self.evidence
             .retain(|(src_time, _)| src_time.clone().into() >= min_src_time);
+    }
+
+    pub fn update(&mut self, cur_src_time: Src) {
+        self.line = if self.evidence.len() >= 2 {
+            let (front, back) = self.evidence.as_slices();
+            let values = pareen::slice(front)
+                .seq_with_dur(pareen::slice(back))
+                .map(|(src_time, tgt_time)| (src_time.into(), tgt_time.into()));
+            let line = simple_linear_regression_with_slope(1.0, values);
+            //let line = pareen::simple_linear_regression(values);
+            if let (Some(ema_alpha), Some(old_line)) = (self.config.ema_alpha, &self.line) {
+                Some(pareen::stats::Line {
+                    slope: 1.0,
+                    y_intercept: ema_alpha * line.0.y_intercept
+                        + (1.0 - ema_alpha) * old_line.y_intercept,
+                })
+            } else {
+                Some(line.0)
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn eval(&self, t: Src) -> Option<Tgt> {
+        Fun::eval(self, t)
     }
 }
 
@@ -92,16 +106,6 @@ where
     type V = Option<Tgt>;
 
     fn eval(&self, t: Src) -> Option<Tgt> {
-        if self.evidence.len() >= 2 {
-            let (front, back) = self.evidence.as_slices();
-            let values = pareen::slice(front)
-                .seq_with_dur(pareen::slice(back))
-                .map(|(src_time, tgt_time)| (src_time.into(), tgt_time.into()));
-            let line = simple_linear_regression_with_slope(1.0, values);
-            //let line = pareen::simple_linear_regression(values);
-            Some(line.eval(t.into()).into())
-        } else {
-            None
-        }
+        pareen::Anim(&self.line).eval(t.into()).map(f64::into)
     }
 }
