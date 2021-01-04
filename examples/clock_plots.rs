@@ -1,7 +1,11 @@
+use std::rc::Rc;
+
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 
 use gnuplot::{AutoOption, AxesCommon, Caption, DashType, Figure, Graph, LineStyle, LineWidth};
+
+use pareen::AnimBox;
 
 use untimely::{
     time::{ClientGameClock, DelayedTimeMappingClock, TimeWarpFunction},
@@ -9,51 +13,107 @@ use untimely::{
 };
 
 #[derive(Debug, Clone)]
-pub struct ConnectionProfile {
-    pub name: &'static str,
+pub struct ConnectionParams {
     pub receive_latency_mean_millis: f64,
     pub receive_latency_std_dev: f64,
     pub receive_loss: f64,
 }
 
-impl ConnectionProfile {
-    pub const NO_VARIANCE: ConnectionProfile = ConnectionProfile {
-        name: "no variance connection",
-        receive_latency_mean_millis: 100.0,
-        receive_latency_std_dev: 0.0,
-        receive_loss: 0.0,
-    };
-
-    pub const GREAT: ConnectionProfile = ConnectionProfile {
-        name: "great connection",
-        receive_latency_mean_millis: 20.0,
-        receive_latency_std_dev: 1.0,
-        receive_loss: 0.0,
-    };
-
-    pub const OKAY: ConnectionProfile = ConnectionProfile {
-        name: "okay connection",
-        receive_latency_mean_millis: 60.0,
-        receive_latency_std_dev: 10.0,
-        receive_loss: 0.01,
-    };
-
-    pub const OKAYISH: ConnectionProfile = ConnectionProfile {
-        name: "okayish connection",
-        receive_latency_mean_millis: 100.0,
-        receive_latency_std_dev: 20.0,
-        receive_loss: 0.05,
-    };
+#[derive(Clone)]
+pub struct ConnectionProfile {
+    pub name: &'static str,
+    pub params: Rc<AnimBox<GameTimeDelta, ConnectionParams>>,
 }
 
 impl ConnectionProfile {
-    pub fn receive_latency_distr(&self) -> impl Distribution<f64> {
+    pub fn no_variance() -> Self {
+        Self {
+            name: "no variance connection",
+            params: Rc::new(
+                pareen::constant(ConnectionParams {
+                    receive_latency_mean_millis: 100.0,
+                    receive_latency_std_dev: 0.0,
+                    receive_loss: 0.0,
+                })
+                .into_box(),
+            ),
+        }
+    }
+
+    pub fn great() -> Self {
+        Self {
+            name: "great connection",
+            params: Rc::new(
+                pareen::constant(ConnectionParams {
+                    receive_latency_mean_millis: 20.0,
+                    receive_latency_std_dev: 1.0,
+                    receive_loss: 0.0,
+                })
+                .into_box(),
+            ),
+        }
+    }
+
+    pub fn okay() -> Self {
+        Self {
+            name: "okay connection",
+            params: Rc::new(
+                pareen::constant(ConnectionParams {
+                    receive_latency_mean_millis: 60.0,
+                    receive_latency_std_dev: 10.0,
+                    receive_loss: 0.01,
+                })
+                .into_box(),
+            ),
+        }
+    }
+
+    pub fn okayish() -> Self {
+        Self {
+            name: "okayish connection",
+            params: Rc::new(
+                pareen::constant(ConnectionParams {
+                    receive_latency_mean_millis: 100.0,
+                    receive_latency_std_dev: 20.0,
+                    receive_loss: 0.05,
+                })
+                .into_box(),
+            ),
+        }
+    }
+
+    pub fn great_okayish() -> Self {
+        let params = Rc::try_unwrap(Self::great().params)
+            .ok()
+            .unwrap()
+            .map_time(GameTimeDelta::from_secs)
+            .dur(2.0)
+            .seq_with_dur(
+                Rc::try_unwrap(Self::okayish().params)
+                    .ok()
+                    .unwrap()
+                    .map_time(GameTimeDelta::from_secs)
+                    .dur(2.0),
+            )
+            .repeat()
+            .map_time(GameTimeDelta::to_secs)
+            .into_box();
+
+        Self {
+            name: "great<->okayish connection",
+            params: Rc::new(params),
+        }
+    }
+}
+
+impl ConnectionProfile {
+    /*pub fn receive_latency_distr(&self) -> impl Distribution<f64> {
         Normal::new(
             self.receive_latency_mean_millis,
             self.receive_latency_std_dev,
         )
         .unwrap()
-    }
+    }*/
 
     pub fn sample_tick_receive_times(
         &self,
@@ -62,32 +122,47 @@ impl ConnectionProfile {
         start_local_time: LocalTime,
         start_tick_num: TickNum,
     ) -> Vec<(LocalTime, TickNum)> {
-        let mut receive_times: Vec<_> = self
-            .receive_latency_distr()
-            .sample_iter(rand::thread_rng())
-            .take(num_ticks)
-            .enumerate()
-            .map(|(tick_num_delta, receive_latency)| {
+        let mut receive_times: Vec<_> = (0..num_ticks)
+            .map(|tick_num_delta| {
                 let tick_num_delta = TickNumDelta::from(tick_num_delta);
                 let tick_num = start_tick_num + tick_num_delta;
+                let game_time_delta = tick_num_delta.to_game_time_delta(tick_time_delta);
+                let game_time = GameTime::ZERO + game_time_delta;
 
                 // NOTE: We assume here that the server performs and sends ticks
                 // with a perfectly constant period. Further, we assume that
                 // GameTime progresses at the same speed as LocalTime.
-                let game_time_delta = tick_num_delta.to_game_time_delta(tick_time_delta);
-                let local_time_delta = LocalTimeDelta::from_secs(game_time_delta.to_secs());
-                let local_time = start_local_time + local_time_delta;
-                let local_arrival_time = local_time + LocalTimeDelta::from_millis(receive_latency);
+                let server_local_time_delta = LocalTimeDelta::from_secs(game_time_delta.to_secs());
+                let server_local_time = start_local_time + server_local_time_delta;
 
-                (local_arrival_time, tick_num)
+                let connection_params = self.params.eval(game_time_delta);
+                let receive_latency = Normal::new(
+                    connection_params.receive_latency_mean_millis,
+                    connection_params.receive_latency_std_dev,
+                )
+                .unwrap()
+                .sample(&mut rand::thread_rng());
+
+                let client_receive_time =
+                    server_local_time + LocalTimeDelta::from_millis(receive_latency);
+
+                (client_receive_time, tick_num)
             })
-            .filter(|_| rand::thread_rng().gen::<f64>() >= self.receive_loss)
+            .filter(|(_, tick_num)| {
+                rand::thread_rng().gen::<f64>()
+                    >= self
+                        .params
+                        .eval(tick_num.to_delta().to_game_time_delta(tick_time_delta))
+                        .receive_loss
+            })
             .collect();
 
         // Due to the receive jitter, it can happen that we receive ticks out
         // of order. We re-sort here, so that the events are ordered by the
         // client's local time.
-        receive_times.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap());
+        receive_times.sort_by(|(local_time_a, _), (local_time_b, _)| {
+            local_time_a.partial_cmp(local_time_b).unwrap()
+        });
         receive_times
     }
 }
@@ -133,6 +208,22 @@ impl ClientProfile {
     }
 }
 
+pub fn perfect_game_time(
+    profile: &ConnectionProfile,
+    client_local_time: LocalTime,
+    game_time_delay: GameTimeDelta,
+) -> GameTime {
+    // FIXME: This is assuming that both server and client local time start at zero.
+    let server_game_time_delta = client_local_time.to_delta().to_game_time_delta();
+
+    let connection_params = profile.params.eval(server_game_time_delta);
+    let perfect_local_time = client_local_time
+        - LocalTimeDelta::from_millis(connection_params.receive_latency_mean_millis)
+        - game_time_delay.to_local_time_delta();
+
+    GameTime::from_secs_since_start(perfect_local_time.to_secs_since_start())
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SimulationFrame {
     pub local_time: LocalTime,
@@ -144,7 +235,6 @@ pub struct SimulationFrame {
     pub waiting_for_tick_data: bool,
 }
 
-#[derive(Debug, Clone)]
 pub struct SimulationOutput {
     pub connection_profile: ConnectionProfile,
     pub client_profile: ClientProfile,
@@ -234,10 +324,13 @@ pub fn evaluate_simulation_output(output: &SimulationOutput) -> EvaluationMetric
         .frames
         .iter()
         .map(|frame| {
-            let perfect_game_time = frame.local_time.to_millis_since_start()
-                - output.connection_profile.receive_latency_mean_millis
-                - output.game_time_delay.to_millis();
-            (perfect_game_time - frame.game_time.to_millis_since_start()).powi(2)
+            let perfect_game_time = perfect_game_time(
+                &output.connection_profile,
+                frame.local_time,
+                output.game_time_delay,
+            );
+            (perfect_game_time.to_millis_since_start() - frame.game_time.to_millis_since_start())
+                .powi(2)
         })
         .sum::<f64>()
         / output.frames.len() as f64;
@@ -307,10 +400,12 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
         .frames
         .iter()
         .map(|frame| {
-            f64::from(frame.local_time)
-                - output.connection_profile.receive_latency_mean_millis / 1000.0
-                - output.game_time_delay.to_secs()
-                - time_shift(frame)
+            let perfect_game_time = perfect_game_time(
+                &output.connection_profile,
+                frame.local_time,
+                output.game_time_delay,
+            );
+            perfect_game_time.to_secs_since_start() - time_shift(frame)
         })
         .collect();
     let max_received_game_time: Vec<_> = output
@@ -375,11 +470,11 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
         receive_time_game.as_slice(),
         &[Caption("received game time")],
     );
-    axes.lines_points(
+    /*axes.lines_points(
         client_local_time.as_slice(),
         time_delay.as_slice(),
         &[Caption("time delay")],
-    );
+    );*/
 
     fg.show().unwrap();
 }
@@ -409,12 +504,12 @@ fn plot_receive_latencies(profiles: &[&ConnectionProfile], num_ticks: usize) {
     );
 
     for profile in profiles {
-        let y: Vec<f64> = profile
+        /*let y: Vec<f64> = profile
             .receive_latency_distr()
             .sample_iter(rand::thread_rng())
             .take(num_ticks)
             .collect();
-        axes.lines(x.as_slice(), y.as_slice(), &[Caption(profile.name)]);
+        axes.lines(x.as_slice(), y.as_slice(), &[Caption(profile.name)]);*/
     }
     fg.show().unwrap();
 }
@@ -467,7 +562,12 @@ fn plot_evidence_len_vs_simulation_metrics(
     client_profile={:?},
     client_game_clock=DelayedTimeMappingClock,
 )",
-        tick_time_delta, game_time_delay, num_ticks, num_trials, connection_profile, client_profile,
+        tick_time_delta,
+        game_time_delay,
+        num_ticks,
+        num_trials,
+        connection_profile.name,
+        client_profile.name,
     );
 
     let mut fg = Figure::new();
@@ -595,23 +695,23 @@ fn plot_evidence_len_vs_simulation_metrics(
 fn main() {
     let tick_time_delta = GameTimeDelta::from_secs(1.0 / 16.0);
 
-    plot_evidence_len_vs_simulation_metrics(
-        &ConnectionProfile::OKAY,
+    /*plot_evidence_len_vs_simulation_metrics(
+        &ConnectionProfile::great_okayish(),
         &ClientProfile::SOLID_60HZ,
         "warp factor variance",
         |metrics| metrics.warp_factor_variance,
     );
     plot_evidence_len_vs_simulation_metrics(
-        &ConnectionProfile::OKAY,
+        &ConnectionProfile::great_okayish(),
         &ClientProfile::SOLID_60HZ,
         "game time MSE",
         |metrics| metrics.game_time_mean_squared_error,
-    );
+    );*/
 
     {
         let game_time_delay = 2.0 * tick_time_delta;
         let time_warp_function = TimeWarpFunction::Sigmoid {
-            alpha: 50.0,
+            alpha: 10.0,
             power: 1,
         };
         //let time_warp_function = TimeWarpFunction::Catcheb;
@@ -620,7 +720,7 @@ fn main() {
             game_time_delay,
             time_warp_function,
             TimeMappingConfig {
-                max_evidence_len: 128,
+                max_evidence_len: 8,
                 tick_time_delta,
                 ignore_if_out_of_order: false,
                 ema_alpha: None,
@@ -629,7 +729,7 @@ fn main() {
         let num_ticks = 256;
         let simulation_output = simulate(
             client_game_clock,
-            &ConnectionProfile::OKAY,
+            &ConnectionProfile::great_okayish(),
             &ClientProfile::SOLID_60HZ,
             tick_time_delta,
             game_time_delay,

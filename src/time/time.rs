@@ -46,15 +46,15 @@ macro_rules! impl_time_type {
         impl $time {
             pub const ZERO: $time = $time($delta(0.0));
 
-            pub fn from_secs(secs_since_start: f64) -> Self {
+            pub fn from_secs_since_start(secs_since_start: f64) -> Self {
                 $time($delta::from_secs(secs_since_start))
             }
 
-            pub fn from_mins(mins_since_start: f64) -> Self {
+            pub fn from_mins_since_start(mins_since_start: f64) -> Self {
                 $time($delta::from_mins(mins_since_start))
             }
 
-            pub fn from_millis(millis_since_start: f64) -> Self {
+            pub fn from_millis_since_start(millis_since_start: f64) -> Self {
                 $time($delta::from_millis(millis_since_start))
             }
 
@@ -178,5 +178,11 @@ impl_time_type!(LocalTime, LocalTimeDelta);
 impl LocalTimeDelta {
     pub fn to_game_time_delta(&self) -> GameTimeDelta {
         GameTimeDelta::from_secs(self.to_secs())
+    }
+}
+
+impl GameTimeDelta {
+    pub fn to_local_time_delta(&self) -> LocalTimeDelta {
+        LocalTimeDelta::from_secs(self.to_secs())
     }
 }

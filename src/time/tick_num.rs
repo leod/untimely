@@ -8,8 +8,8 @@ pub struct TickNumDelta(u64);
 impl TickNumDelta {
     pub const ZERO: TickNumDelta = TickNumDelta(0);
 
-    pub fn to_game_time_delta(self, tick_delta: GameTimeDelta) -> GameTimeDelta {
-        self.0 as f64 * tick_delta
+    pub fn to_game_time_delta(self, tick_time_delta: GameTimeDelta) -> GameTimeDelta {
+        self.0 as f64 * tick_time_delta
     }
 }
 
