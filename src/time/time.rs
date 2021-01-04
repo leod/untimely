@@ -35,7 +35,7 @@ macro_rules! impl_time_type {
             }
 
             pub fn min(self, other: Self) -> Self {
-                $delta(self.0.max(other.0))
+                $delta(self.0.min(other.0))
             }
 
             pub fn max(self, other: Self) -> Self {
@@ -75,7 +75,7 @@ macro_rules! impl_time_type {
             }
 
             pub fn min(self, other: Self) -> Self {
-                $time(self.0.max(other.0))
+                $time(self.0.min(other.0))
             }
 
             pub fn max(self, other: Self) -> Self {

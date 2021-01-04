@@ -20,6 +20,8 @@ pub struct DelayedTimeMappingClock {
     current_local_time: LocalTime,
     current_game_time: GameTime,
     current_predicted_receive_game_time: GameTime,
+
+    max_received_game_time: GameTime,
 }
 
 #[derive(Debug, Clone)]
@@ -58,6 +60,7 @@ impl DelayedTimeMappingClock {
             current_local_time: LocalTime::ZERO,
             current_game_time: GameTime::ZERO,
             current_predicted_receive_game_time: GameTime::ZERO,
+            max_received_game_time: GameTime::ZERO,
         }
     }
 }
@@ -66,6 +69,8 @@ impl ClientGameClock for DelayedTimeMappingClock {
     fn record_receive_event(&mut self, local_time: LocalTime, received_tick_num: TickNum) {
         let game_time = received_tick_num.to_game_time(self.tick_time_delta);
         self.time_mapping.record_evidence(local_time, game_time);
+
+        self.max_received_game_time = self.max_received_game_time.max(game_time);
     }
 
     fn advance_local_time(&mut self, local_time_delta: LocalTimeDelta) {
@@ -73,7 +78,10 @@ impl ClientGameClock for DelayedTimeMappingClock {
         let game_time_delta = target_game_time - self.current_game_time;
         let warp_factor = self.time_warp_function.eval(game_time_delta);
 
+        let max_allowed_game_time = self.current_game_time.max(self.max_received_game_time);
         self.current_game_time += local_time_delta.to_game_time_delta() * warp_factor;
+        self.current_game_time = self.current_game_time.min(max_allowed_game_time);
+
         self.current_local_time += local_time_delta;
 
         self.time_mapping.update(self.current_local_time);

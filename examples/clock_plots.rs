@@ -127,7 +127,6 @@ impl ConnectionProfile {
                 let tick_num_delta = TickNumDelta::from(tick_num_delta);
                 let tick_num = start_tick_num + tick_num_delta;
                 let game_time_delta = tick_num_delta.to_game_time_delta(tick_time_delta);
-                let game_time = GameTime::ZERO + game_time_delta;
 
                 // NOTE: We assume here that the server performs and sends ticks
                 // with a perfectly constant period. Further, we assume that
@@ -711,7 +710,7 @@ fn main() {
     {
         let game_time_delay = 2.0 * tick_time_delta;
         let time_warp_function = TimeWarpFunction::Sigmoid {
-            alpha: 10.0,
+            alpha: 50.0,
             power: 1,
         };
         //let time_warp_function = TimeWarpFunction::Catcheb;
@@ -726,10 +725,10 @@ fn main() {
                 ema_alpha: None,
             },
         );
-        let num_ticks = 256;
+        let num_ticks = 128;
         let simulation_output = simulate(
             client_game_clock,
-            &ConnectionProfile::great_okayish(),
+            &ConnectionProfile::okayish(),
             &ClientProfile::SOLID_60HZ,
             tick_time_delta,
             game_time_delay,
@@ -739,8 +738,8 @@ fn main() {
             "Evaluation metrics: {:?}",
             evaluate_simulation_output(&simulation_output)
         );
-        //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
-        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
+        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
+        //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
     }
 
     /*plot_receive_latencies(
