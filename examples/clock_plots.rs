@@ -61,7 +61,7 @@ impl ConnectionProfile {
                 pareen::constant(ConnectionParams {
                     receive_latency_mean_millis: 60.0,
                     receive_latency_std_dev: 10.0,
-                    receive_loss: 0.01,
+                    receive_loss: 0.00,
                 })
                 .into_box(),
             ),
@@ -71,6 +71,20 @@ impl ConnectionProfile {
     pub fn okayish() -> Self {
         Self {
             name: "okayish connection",
+            params: Rc::new(
+                pareen::constant(ConnectionParams {
+                    receive_latency_mean_millis: 100.0,
+                    receive_latency_std_dev: 10.0,
+                    receive_loss: 0.0,
+                })
+                .into_box(),
+            ),
+        }
+    }
+
+    pub fn bad() -> Self {
+        Self {
+            name: "bad connection",
             params: Rc::new(
                 pareen::constant(ConnectionParams {
                     receive_latency_mean_millis: 100.0,
@@ -87,13 +101,13 @@ impl ConnectionProfile {
             .ok()
             .unwrap()
             .map_time(GameTimeDelta::from_secs)
-            .dur(2.0)
+            .dur(10.0)
             .seq_with_dur(
                 Rc::try_unwrap(Self::okayish().params)
                     .ok()
                     .unwrap()
                     .map_time(GameTimeDelta::from_secs)
-                    .dur(2.0),
+                    .dur(10.0),
             )
             .repeat()
             .map_time(GameTimeDelta::to_secs)
@@ -316,6 +330,7 @@ pub struct EvaluationMetrics {
     pub game_time_mean_squared_error: f64,
     pub warp_factor_mean: f64,
     pub warp_factor_variance: f64,
+    pub num_freeze_frames: usize,
 }
 
 pub fn evaluate_simulation_output(output: &SimulationOutput) -> EvaluationMetrics {
@@ -333,6 +348,12 @@ pub fn evaluate_simulation_output(output: &SimulationOutput) -> EvaluationMetric
         })
         .sum::<f64>()
         / output.frames.len() as f64;
+
+    let num_freeze_frames = output
+        .frames
+        .iter()
+        .filter(|frame| frame.game_time_delta == GameTimeDelta::ZERO)
+        .count();
 
     let warp_factors: Vec<_> = output
         .frames
@@ -352,6 +373,7 @@ pub fn evaluate_simulation_output(output: &SimulationOutput) -> EvaluationMetric
         game_time_mean_squared_error,
         warp_factor_mean,
         warp_factor_variance,
+        num_freeze_frames,
     }
 }
 
@@ -585,14 +607,14 @@ fn plot_evidence_len_vs_simulation_metrics(
             false,
             None,
         ),
-        (
+        /*(
             TimeWarpFunction::Sigmoid {
                 alpha: 10.0,
                 power: 1,
             },
             true,
             None,
-        ),
+        ),*/
         (
             TimeWarpFunction::Sigmoid {
                 alpha: 15.0,
@@ -601,14 +623,14 @@ fn plot_evidence_len_vs_simulation_metrics(
             false,
             None,
         ),
-        (
+        /*(
             TimeWarpFunction::Sigmoid {
                 alpha: 15.0,
                 power: 1,
             },
             false,
             Some(0.5),
-        ),
+        ),*/
         (
             TimeWarpFunction::Sigmoid {
                 alpha: 25.0,
@@ -625,14 +647,14 @@ fn plot_evidence_len_vs_simulation_metrics(
             false,
             None,
         ),
-        (
+        /*(
             TimeWarpFunction::Sigmoid {
                 alpha: 50.0,
                 power: 1,
             },
             false,
             Some(0.2),
-        ),
+        ),*/
         (
             TimeWarpFunction::Sigmoid {
                 alpha: 100.0,
@@ -641,7 +663,7 @@ fn plot_evidence_len_vs_simulation_metrics(
             false,
             None,
         ),
-        (TimeWarpFunction::Catcheb, false, None),
+        //(TimeWarpFunction::Catcheb, false, None),
     ];
 
     for (time_warp_function, ignore_if_out_of_order, ema_alpha) in settings.into_iter() {
@@ -697,6 +719,12 @@ fn main() {
     /*plot_evidence_len_vs_simulation_metrics(
         &ConnectionProfile::great_okayish(),
         &ClientProfile::SOLID_60HZ,
+        "num freeze frames",
+        |metrics| metrics.num_freeze_frames as f64,
+    );
+    plot_evidence_len_vs_simulation_metrics(
+        &ConnectionProfile::great_okayish(),
+        &ClientProfile::SOLID_60HZ,
         "warp factor variance",
         |metrics| metrics.warp_factor_variance,
     );
@@ -719,17 +747,18 @@ fn main() {
             game_time_delay,
             time_warp_function,
             TimeMappingConfig {
-                max_evidence_len: 8,
+                max_evidence_len: 16,
                 tick_time_delta,
                 ignore_if_out_of_order: false,
-                ema_alpha: None,
+                ema_alpha: Some(0.1),
             },
         );
-        let num_ticks = 128;
+        let num_ticks = 1024;
         let simulation_output = simulate(
             client_game_clock,
-            &ConnectionProfile::okayish(),
-            &ClientProfile::SOLID_60HZ,
+            //&ConnectionProfile::okayish(),
+            &ConnectionProfile::great_okayish(),
+            &ClientProfile::PERFECT_60HZ,
             tick_time_delta,
             game_time_delay,
             num_ticks,
@@ -738,8 +767,8 @@ fn main() {
             "Evaluation metrics: {:?}",
             evaluate_simulation_output(&simulation_output)
         );
-        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
-        //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
+        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
+        //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
     }
 
     /*plot_receive_latencies(
