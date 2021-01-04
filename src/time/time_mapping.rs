@@ -1,10 +1,13 @@
 use std::collections::VecDeque;
 
-use pareen::{simple_linear_regression, Fun};
+use pareen::{simple_linear_regression_with_slope, Fun};
+
+use crate::GameTimeDelta;
 
 #[derive(Debug, Clone)]
 pub struct TimeMappingConfig {
     pub max_evidence_len: usize,
+    pub tick_time_delta: GameTimeDelta,
 }
 
 #[derive(Debug, Clone)]
@@ -77,7 +80,7 @@ where
             let values = pareen::slice(front)
                 .seq_with_dur(pareen::slice(back))
                 .map(|(src_time, tgt_time)| (src_time.into(), tgt_time.into()));
-            let line = simple_linear_regression(values);
+            let line = simple_linear_regression_with_slope(1.0, values);
             Some(line.eval(t.into()).into())
         } else {
             None

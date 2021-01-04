@@ -13,23 +13,50 @@ pub trait ClientGameClock {
 pub struct DelayedTimeMappingClock {
     tick_time_delta: GameTimeDelta,
     game_time_delay: GameTimeDelta,
+    time_warp_function: TimeWarpFunction,
 
     time_mapping: TimeMapping<LocalTime, GameTime>,
 
     current_local_time: LocalTime,
+    current_game_time: GameTime,
+    current_predicted_receive_game_time: GameTime,
+}
+
+#[derive(Debug, Clone)]
+pub enum TimeWarpFunction {
+    Sigmoid { alpha: f64, power: i32 },
+    Catcheb,
+}
+
+impl TimeWarpFunction {
+    pub fn eval(&self, t: GameTimeDelta) -> f64 {
+        match self {
+            TimeWarpFunction::Sigmoid { alpha, power } => {
+                let exponent = -alpha * t.to_secs().powi(*power);
+                0.5 + 1.0 / (1.0 + exponent.exp())
+            }
+            TimeWarpFunction::Catcheb => {
+                0.5 + (2.0 - 0.5) / (1.0 + 2.0 * (-t.to_secs() / 0.005).exp())
+            }
+        }
+    }
 }
 
 impl DelayedTimeMappingClock {
     pub fn new(
         tick_time_delta: GameTimeDelta,
         game_time_delay: GameTimeDelta,
+        time_warp_function: TimeWarpFunction,
         time_mapping_config: TimeMappingConfig,
     ) -> Self {
         DelayedTimeMappingClock {
             tick_time_delta,
             game_time_delay,
+            time_warp_function,
             time_mapping: TimeMapping::new(time_mapping_config),
             current_local_time: LocalTime::ZERO,
+            current_game_time: GameTime::ZERO,
+            current_predicted_receive_game_time: GameTime::ZERO,
         }
     }
 }
@@ -41,16 +68,26 @@ impl ClientGameClock for DelayedTimeMappingClock {
     }
 
     fn advance_local_time(&mut self, local_time_delta: LocalTimeDelta) {
+        self.current_predicted_receive_game_time = self
+            .time_mapping
+            .eval(self.current_local_time)
+            .unwrap_or(GameTime::ZERO);
+        let target_game_time = self.current_predicted_receive_game_time - self.game_time_delay;
+        let game_time_delta = target_game_time - self.current_game_time;
+        let warp_factor = self.time_warp_function.eval(game_time_delta);
+
+        self.current_game_time =
+            self.current_game_time + local_time_delta.to_game_time_delta() * warp_factor;
+
         self.current_local_time += local_time_delta;
     }
 
     fn get_predicted_receive_game_time(&self) -> GameTime {
-        self.time_mapping
-            .eval(self.current_local_time)
-            .unwrap_or(GameTime::ZERO)
+        self.current_predicted_receive_game_time
     }
 
     fn get_game_time(&self) -> GameTime {
-        self.get_predicted_receive_game_time() - self.game_time_delay
+        //self.get_predicted_receive_game_time() - self.game_time_delay
+        self.current_game_time
     }
 }

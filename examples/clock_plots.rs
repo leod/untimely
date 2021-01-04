@@ -1,10 +1,10 @@
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 
-use gnuplot::{AutoOption, AxesCommon, Caption, Figure, Graph};
+use gnuplot::{AutoOption, AxesCommon, Caption, DashType, Figure, Graph, LineStyle, LineWidth};
 
 use untimely::{
-    time::{ClientGameClock, DelayedTimeMappingClock},
+    time::{ClientGameClock, DelayedTimeMappingClock, TimeWarpFunction},
     GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta, TimeMappingConfig,
 };
 
@@ -17,6 +17,13 @@ pub struct ConnectionProfile {
 }
 
 impl ConnectionProfile {
+    pub const NO_VARIANCE: ConnectionProfile = ConnectionProfile {
+        name: "no variance connection",
+        receive_latency_mean_millis: 100.0,
+        receive_latency_std_dev: 0.0,
+        receive_loss: 0.0,
+    };
+
     pub const GREAT: ConnectionProfile = ConnectionProfile {
         name: "great connection",
         receive_latency_mean_millis: 20.0,
@@ -116,6 +123,7 @@ pub struct SimulationFrame {
 pub struct SimulationOutput {
     pub connection_profile: ConnectionProfile,
     pub client_profile: ClientProfile,
+    pub tick_time_delta: GameTimeDelta,
     pub receive_times: Vec<(LocalTime, TickNum)>,
     pub frames: Vec<SimulationFrame>,
 }
@@ -182,6 +190,7 @@ pub fn simulate<Clock: ClientGameClock>(
     SimulationOutput {
         connection_profile: connection_profile.clone(),
         client_profile: client_profile.clone(),
+        tick_time_delta,
         receive_times,
         frames,
     }
@@ -227,6 +236,16 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
         .iter()
         .map(|frame| f64::from(frame.game_time) - time_shift(frame))
         .collect();
+    let perfect_game_time: Vec<_> = output
+        .frames
+        .iter()
+        .map(|frame| {
+            f64::from(frame.local_time)
+                - output.connection_profile.receive_latency_mean_millis / 1000.0
+                - 2.0 * output.tick_time_delta.to_secs()
+                - time_shift(frame)
+        })
+        .collect();
     let max_received_game_time: Vec<_> = output
         .frames
         .iter()
@@ -241,22 +260,27 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
     axes.lines(
         client_local_time.as_slice(),
         server_local_time.as_slice(),
-        &[Caption("server game time")],
+        &[Caption("server game time"), LineWidth(1.0)],
+    );
+    axes.lines_points(
+        client_local_time.as_slice(),
+        predicted_receive_game_time.as_slice(),
+        &[Caption("predicted receive game time"), LineWidth(2.0)],
+    );
+    axes.lines_points(
+        client_local_time.as_slice(),
+        game_time.as_slice(),
+        &[Caption("client game time"), LineWidth(2.0)],
     );
     axes.lines(
         client_local_time.as_slice(),
-        game_time.as_slice(),
-        &[Caption("client game time")],
+        perfect_game_time.as_slice(),
+        &[Caption("perfect client game time"), LineWidth(1.0)],
     );
-    axes.lines(
+    axes.lines_points(
         client_local_time.as_slice(),
         max_received_game_time.as_slice(),
         &[Caption("max received game time")],
-    );
-    axes.lines(
-        client_local_time.as_slice(),
-        predicted_receive_game_time.as_slice(),
-        &[Caption("predicted receive game time")],
     );
 
     fg.show().unwrap();
@@ -318,27 +342,35 @@ fn plot_tick_receive_times(
 }
 
 fn main() {
-    let tick_time_delta = GameTimeDelta::from_secs(1.0 / 20.0);
+    let tick_time_delta = GameTimeDelta::from_secs(1.0 / 16.0);
 
     {
         let game_time_delay = 2.0 * tick_time_delta;
+        let time_warp_function = TimeWarpFunction::Sigmoid {
+            alpha: 50.0,
+            power: 1,
+        };
+        //let time_warp_function = TimeWarpFunction::Catcheb;
+
         let client_game_clock = DelayedTimeMappingClock::new(
             tick_time_delta,
             game_time_delay,
+            time_warp_function,
             TimeMappingConfig {
-                max_evidence_len: 8,
+                max_evidence_len: 256,
+                tick_time_delta,
             },
         );
-        let num_ticks = 256;
+        let num_ticks = 128;
         let simulation_output = simulate(
             client_game_clock,
-            &ConnectionProfile::OKAYISH,
+            &ConnectionProfile::NO_VARIANCE,
             &ClientProfile::PERFECT_60HZ,
             tick_time_delta,
             num_ticks,
         );
         plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
-        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
+        //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
     }
 
     /*plot_receive_latencies(

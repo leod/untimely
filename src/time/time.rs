@@ -174,3 +174,9 @@ macro_rules! impl_time_type {
 
 impl_time_type!(GameTime, GameTimeDelta);
 impl_time_type!(LocalTime, LocalTimeDelta);
+
+impl LocalTimeDelta {
+    pub fn to_game_time_delta(&self) -> GameTimeDelta {
+        GameTimeDelta::from_secs(self.to_secs())
+    }
+}
