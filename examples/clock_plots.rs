@@ -94,9 +94,27 @@ pub struct ClientProfile {
 
 impl ClientProfile {
     pub const PERFECT_60HZ: ClientProfile = ClientProfile {
-        name: "solid client",
+        name: "perfect client, 60Hz",
         frame_time_mean_millis: 1000.0 / 60.0,
         frame_time_std_dev: 0.0,
+    };
+
+    pub const PERFECT_32HZ: ClientProfile = ClientProfile {
+        name: "perfect client, 32Hz",
+        frame_time_mean_millis: 1000.0 / 32.0,
+        frame_time_std_dev: 0.0,
+    };
+
+    pub const PERFECT_16HZ: ClientProfile = ClientProfile {
+        name: "perfect client, 16Hz",
+        frame_time_mean_millis: 1000.0 / 16.0,
+        frame_time_std_dev: 0.0,
+    };
+
+    pub const SOLID_60HZ: ClientProfile = ClientProfile {
+        name: "solid client",
+        frame_time_mean_millis: 1000.0 / 60.0,
+        frame_time_std_dev: 2.5,
     };
 
     pub fn frame_time_distr(&self) -> impl Distribution<f64> {
@@ -154,11 +172,6 @@ pub fn simulate<Clock: ClientGameClock>(
             break;
         }
 
-        // Advance the client's local time.
-        frame.local_time_delta = client_profile.sample_frame_time_delta();
-        frame.local_time += frame.local_time_delta;
-        clock.advance_local_time(frame.local_time_delta);
-
         // Check for the next received ticks.
         while let Some((receive_time, received_tick_num)) = receive_times.last().copied() {
             if receive_time > frame.local_time {
@@ -167,21 +180,26 @@ pub fn simulate<Clock: ClientGameClock>(
             }
 
             receive_times.pop();
-            let receive_game_time = received_tick_num.to_game_time(tick_time_delta);
-            frame.max_received_game_time = frame.max_received_game_time.max(receive_game_time);
+            let received_game_time = received_tick_num.to_game_time(tick_time_delta);
+            frame.max_received_game_time = frame.max_received_game_time.max(received_game_time);
 
-            clock.record_receive_event(receive_time, received_tick_num)
+            clock.record_receive_event(receive_time, received_tick_num);
+            //clock.record_receive_event(frame.local_time, received_tick_num);
         }
 
-        // Advance the client's game time acording to our clock.
-        let next_game_time = clock.get_game_time();
-        frame.game_time_delta = next_game_time - frame.game_time;
-        frame.game_time = next_game_time;
+        // Keep track of game time and deltas for simulation output.
+        frame.game_time_delta = clock.get_game_time() - frame.game_time;
+        frame.game_time = clock.get_game_time();
 
         // Remember what the clock thinks is the current receive game time.
         frame.predicted_receive_game_time = clock.get_predicted_receive_game_time();
 
         frames.push(frame.clone());
+
+        // Advance the client's local time and game time.
+        frame.local_time_delta = client_profile.sample_frame_time_delta();
+        frame.local_time += frame.local_time_delta;
+        clock.advance_local_time(frame.local_time_delta);
     }
 
     // Restore original receive times for output...
@@ -357,36 +375,38 @@ fn main() {
             game_time_delay,
             time_warp_function,
             TimeMappingConfig {
-                max_evidence_len: 256,
+                max_evidence_len: 16,
                 tick_time_delta,
+                ignore_if_out_of_order: false,
             },
         );
-        let num_ticks = 128;
+        let num_ticks = 64;
         let simulation_output = simulate(
             client_game_clock,
-            &ConnectionProfile::NO_VARIANCE,
-            &ClientProfile::PERFECT_60HZ,
+            &ConnectionProfile::OKAYISH,
+            &ClientProfile::SOLID_60HZ,
             tick_time_delta,
             num_ticks,
         );
         plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
+
         //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
     }
 
     /*plot_receive_latencies(
-        &[&ConnectionProfile::GREAT, &ConnectionProfile::OKAYISH],
+        &[&ConnectionProfile::GREAT, &ConnectionProfile::OKAYISH, &ConnectionProfile::NO_VARIANCE],
         128,
     );
 
     {
-        let tick_receive_times = ConnectionProfile::OKAYISH.sample_tick_receive_times(
+        let tick_receive_times = ConnectionProfile::NO_VARIANCE.sample_tick_receive_times(
             30,
             tick_time_delta,
             LocalTime::ZERO,
             TickNum::ZERO,
         );
         plot_tick_receive_times(
-            &ConnectionProfile::OKAYISH,
+            &ConnectionProfile::NO_VARIANCE,
             &tick_receive_times,
             tick_time_delta,
         );

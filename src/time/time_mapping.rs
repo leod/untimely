@@ -8,6 +8,7 @@ use crate::GameTimeDelta;
 pub struct TimeMappingConfig {
     pub max_evidence_len: usize,
     pub tick_time_delta: GameTimeDelta,
+    pub ignore_if_out_of_order: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -16,7 +17,11 @@ pub struct TimeMapping<Src, Tgt> {
     evidence: VecDeque<(Src, Tgt)>,
 }
 
-impl<Src, Tgt> TimeMapping<Src, Tgt> {
+impl<Src, Tgt> TimeMapping<Src, Tgt>
+where
+    Src: PartialOrd + Clone,
+    Tgt: PartialOrd + Clone,
+{
     pub fn new(config: TimeMappingConfig) -> Self {
         TimeMapping {
             config,
@@ -36,6 +41,18 @@ impl<Src, Tgt> TimeMapping<Src, Tgt> {
     }
 
     pub fn record_evidence(&mut self, src_time: Src, tgt_time: Tgt) {
+        if self.config.ignore_if_out_of_order {
+            let is_in_order =
+                self.evidence
+                    .back()
+                    .map_or(true, |(newest_src_time, newest_tgt_time)| {
+                        src_time > newest_src_time.clone() && tgt_time > newest_tgt_time.clone()
+                    });
+            if !is_in_order {
+                return;
+            }
+        }
+
         self.evidence.push_back((src_time, tgt_time));
         if self.evidence.len() > self.config.max_evidence_len {
             self.evidence.pop_front();
@@ -81,6 +98,7 @@ where
                 .seq_with_dur(pareen::slice(back))
                 .map(|(src_time, tgt_time)| (src_time.into(), tgt_time.into()));
             let line = simple_linear_regression_with_slope(1.0, values);
+            //let line = pareen::simple_linear_regression(values);
             Some(line.eval(t.into()).into())
         } else {
             None

@@ -49,6 +49,9 @@ impl DelayedTimeMappingClock {
         time_warp_function: TimeWarpFunction,
         time_mapping_config: TimeMappingConfig,
     ) -> Self {
+        assert!(tick_time_delta > GameTimeDelta::ZERO);
+        assert!(game_time_delay > GameTimeDelta::ZERO);
+
         DelayedTimeMappingClock {
             tick_time_delta,
             game_time_delay,
@@ -68,18 +71,17 @@ impl ClientGameClock for DelayedTimeMappingClock {
     }
 
     fn advance_local_time(&mut self, local_time_delta: LocalTimeDelta) {
-        self.current_predicted_receive_game_time = self
-            .time_mapping
-            .eval(self.current_local_time)
-            .unwrap_or(GameTime::ZERO);
         let target_game_time = self.current_predicted_receive_game_time - self.game_time_delay;
         let game_time_delta = target_game_time - self.current_game_time;
         let warp_factor = self.time_warp_function.eval(game_time_delta);
 
-        self.current_game_time =
-            self.current_game_time + local_time_delta.to_game_time_delta() * warp_factor;
-
+        self.current_game_time += local_time_delta.to_game_time_delta() * warp_factor;
         self.current_local_time += local_time_delta;
+
+        self.current_predicted_receive_game_time = self
+            .time_mapping
+            .eval(self.current_local_time)
+            .unwrap_or(GameTime::ZERO);
     }
 
     fn get_predicted_receive_game_time(&self) -> GameTime {
