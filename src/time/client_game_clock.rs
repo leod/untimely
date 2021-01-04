@@ -44,16 +44,14 @@ impl TimeWarpFunction {
 
 impl DelayedTimeMappingClock {
     pub fn new(
-        tick_time_delta: GameTimeDelta,
         game_time_delay: GameTimeDelta,
         time_warp_function: TimeWarpFunction,
         time_mapping_config: TimeMappingConfig,
     ) -> Self {
-        assert!(tick_time_delta > GameTimeDelta::ZERO);
         assert!(game_time_delay > GameTimeDelta::ZERO);
 
         DelayedTimeMappingClock {
-            tick_time_delta,
+            tick_time_delta: time_mapping_config.tick_time_delta,
             game_time_delay,
             time_warp_function,
             time_mapping: TimeMapping::new(time_mapping_config),

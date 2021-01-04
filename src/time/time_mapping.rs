@@ -26,6 +26,8 @@ where
     f64: Into<Tgt>,
 {
     pub fn new(config: TimeMappingConfig) -> Self {
+        assert!(config.tick_time_delta > GameTimeDelta::ZERO);
+
         TimeMapping {
             config,
             evidence: VecDeque::new(),

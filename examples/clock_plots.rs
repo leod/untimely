@@ -149,6 +149,7 @@ pub struct SimulationOutput {
     pub connection_profile: ConnectionProfile,
     pub client_profile: ClientProfile,
     pub tick_time_delta: GameTimeDelta,
+    pub game_time_delay: GameTimeDelta,
     pub receive_times: Vec<(LocalTime, TickNum)>,
     pub frames: Vec<SimulationFrame>,
 }
@@ -158,6 +159,7 @@ pub fn simulate<Clock: ClientGameClock>(
     connection_profile: &ConnectionProfile,
     client_profile: &ClientProfile,
     tick_time_delta: GameTimeDelta,
+    game_time_delay: GameTimeDelta,
     num_ticks: usize,
 ) -> SimulationOutput {
     let receive_times = connection_profile.sample_tick_receive_times(
@@ -214,8 +216,32 @@ pub fn simulate<Clock: ClientGameClock>(
         connection_profile: connection_profile.clone(),
         client_profile: client_profile.clone(),
         tick_time_delta,
+        game_time_delay,
         receive_times,
         frames,
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EvaluationMetrics {
+    pub game_time_mean_squared_error: f64,
+}
+
+pub fn evaluate_simulation_output(output: &SimulationOutput) -> EvaluationMetrics {
+    let game_time_mean_squared_error = output
+        .frames
+        .iter()
+        .map(|frame| {
+            let perfect_game_time = frame.local_time.to_millis_since_start()
+                - output.connection_profile.receive_latency_mean_millis
+                - output.game_time_delay.to_millis();
+            (perfect_game_time - frame.game_time.to_millis_since_start()).powi(2)
+        })
+        .sum::<f64>()
+        / output.frames.len() as f64;
+
+    EvaluationMetrics {
+        game_time_mean_squared_error,
     }
 }
 
@@ -225,7 +251,7 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
 
     axes.set_title(
         &format!(
-            "Simulation with connection={}, client={}, client\\_game\\_clock={}",
+            "Simulation with connection\\_profile={}, client\\_profile={}, client\\_game\\_clock={}",
             output.connection_profile.name, output.client_profile.name, clock_name
         ),
         &[],
@@ -265,7 +291,7 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
         .map(|frame| {
             f64::from(frame.local_time)
                 - output.connection_profile.receive_latency_mean_millis / 1000.0
-                - 2.0 * output.tick_time_delta.to_secs()
+                - output.game_time_delay.to_secs()
                 - time_shift(frame)
         })
         .collect();
@@ -340,6 +366,13 @@ fn plot_simulation_output(output: &SimulationOutput, clock_name: &str, shift: bo
     fg.show().unwrap();
 }
 
+fn escape_gnuplot(s: &str) -> String {
+    s.to_owned()
+        .replace("_", "\\_")
+        .replace("{", "\\{")
+        .replace("}", "\\}")
+}
+
 fn plot_receive_latencies(profiles: &[&ConnectionProfile], num_ticks: usize) {
     let x: Vec<f64> = (0..num_ticks).map(|n| n as f64).collect();
 
@@ -395,8 +428,157 @@ fn plot_tick_receive_times(
     fg.show().unwrap();
 }
 
+fn plot_evidence_len_vs_simulation_metrics(
+    connection_profile: &ConnectionProfile,
+    client_profile: &ClientProfile,
+) {
+    let tick_time_delta = GameTimeDelta::from_secs(1.0 / 16.0);
+    let game_time_delay = 2.0 * tick_time_delta;
+    let num_ticks = 1024;
+    let num_trials = 16;
+
+    let title = format!(
+        "Simulation evaluation metrics for different time mapping parameters (
+    tick_time_delta={:?},
+    game_time_delay={:?},
+    num_ticks={:?},
+    num_trials={:?},
+    connection_profile={:?},
+    client_profile={:?},
+    client_game_clock=DelayedTimeMappingClock,
+)",
+        tick_time_delta, game_time_delay, num_ticks, num_trials, connection_profile, client_profile,
+    );
+
+    let mut fg = Figure::new();
+    let axes = fg.axes2d();
+    axes.set_title(&escape_gnuplot(&title), &[])
+        .set_legend(Graph(0.5), Graph(0.9), &[], &[])
+        .set_x_label("max evidence len", &[])
+        .set_y_label("MSE: game time", &[]);
+
+    let settings = vec![
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 10.0,
+                power: 1,
+            },
+            false,
+            None,
+        ),
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 10.0,
+                power: 1,
+            },
+            true,
+            None,
+        ),
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 15.0,
+                power: 1,
+            },
+            false,
+            None,
+        ),
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 15.0,
+                power: 1,
+            },
+            false,
+            Some(0.5),
+        ),
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 25.0,
+                power: 1,
+            },
+            false,
+            None,
+        ),
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 50.0,
+                power: 1,
+            },
+            false,
+            None,
+        ),
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 50.0,
+                power: 1,
+            },
+            false,
+            Some(0.2),
+        ),
+        (
+            TimeWarpFunction::Sigmoid {
+                alpha: 100.0,
+                power: 1,
+            },
+            false,
+            None,
+        ),
+        (TimeWarpFunction::Catcheb, false, None),
+    ];
+
+    for (time_warp_function, ignore_if_out_of_order, ema_alpha) in settings.into_iter() {
+        let max_evidence_len = [2, 4, 8, 16, 32, 64];
+        let game_time_mean_squared_error: Vec<_> = max_evidence_len
+            .iter()
+            .map(|max_evidence_len| {
+                (0..num_trials)
+                    .map(|_| {
+                        let client_game_clock = DelayedTimeMappingClock::new(
+                            game_time_delay,
+                            time_warp_function.clone(),
+                            TimeMappingConfig {
+                                max_evidence_len: *max_evidence_len,
+                                tick_time_delta,
+                                ignore_if_out_of_order,
+                                ema_alpha,
+                            },
+                        );
+                        let simulation_output = simulate(
+                            client_game_clock,
+                            connection_profile,
+                            client_profile,
+                            tick_time_delta,
+                            game_time_delay,
+                            num_ticks,
+                        );
+                        let metrics = evaluate_simulation_output(&simulation_output);
+                        metrics.game_time_mean_squared_error
+                    })
+                    .sum::<f64>()
+                    / num_trials as f64
+            })
+            .collect();
+
+        let caption = format!(
+            "{:?} with ignore_out_of_order={}, ema_alpha={:?}",
+            time_warp_function, ignore_if_out_of_order, ema_alpha,
+        );
+        axes.lines_points(
+            &max_evidence_len,
+            game_time_mean_squared_error.as_slice(),
+            &[Caption(&escape_gnuplot(&caption))],
+        );
+    }
+
+    fg.show().unwrap();
+}
+
 fn main() {
     let tick_time_delta = GameTimeDelta::from_secs(1.0 / 16.0);
+
+    plot_evidence_len_vs_simulation_metrics(
+        &ConnectionProfile::OKAYISH,
+        &ClientProfile::SOLID_60HZ,
+    );
 
     {
         let game_time_delay = 2.0 * tick_time_delta;
@@ -407,26 +589,30 @@ fn main() {
         //let time_warp_function = TimeWarpFunction::Catcheb;
 
         let client_game_clock = DelayedTimeMappingClock::new(
-            tick_time_delta,
             game_time_delay,
             time_warp_function,
             TimeMappingConfig {
-                max_evidence_len: 32,
+                max_evidence_len: 128,
                 tick_time_delta,
                 ignore_if_out_of_order: false,
-                ema_alpha: Some(0.5),
+                ema_alpha: None,
             },
         );
-        let num_ticks = 128;
+        let num_ticks = 256;
         let simulation_output = simulate(
             client_game_clock,
             &ConnectionProfile::OKAY,
             &ClientProfile::SOLID_60HZ,
             tick_time_delta,
+            game_time_delay,
             num_ticks,
         );
-        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
+        println!(
+            "Evaluation metrics: {:?}",
+            evaluate_simulation_output(&simulation_output)
+        );
         //plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", false);
+        plot_simulation_output(&simulation_output, "DelayedTimeMappingClock", true);
     }
 
     /*plot_receive_latencies(
