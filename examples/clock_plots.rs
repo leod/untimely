@@ -225,6 +225,8 @@ pub fn simulate<Clock: ClientGameClock>(
 #[derive(Debug, Clone)]
 pub struct EvaluationMetrics {
     pub game_time_mean_squared_error: f64,
+    pub warp_factor_mean: f64,
+    pub warp_factor_variance: f64,
 }
 
 pub fn evaluate_simulation_output(output: &SimulationOutput) -> EvaluationMetrics {
@@ -240,8 +242,24 @@ pub fn evaluate_simulation_output(output: &SimulationOutput) -> EvaluationMetric
         .sum::<f64>()
         / output.frames.len() as f64;
 
+    let warp_factors: Vec<_> = output
+        .frames
+        .iter()
+        .filter(|frame| frame.local_time_delta > LocalTimeDelta::ZERO)
+        .map(|frame| frame.game_time_delta.to_secs() / frame.local_time_delta.to_secs())
+        .collect();
+
+    let warp_factor_mean = warp_factors.iter().sum::<f64>() / output.frames.len() as f64;
+    let warp_factor_variance = warp_factors
+        .iter()
+        .map(|k| (k - warp_factor_mean).powi(2))
+        .sum::<f64>()
+        / output.frames.len() as f64;
+
     EvaluationMetrics {
         game_time_mean_squared_error,
+        warp_factor_mean,
+        warp_factor_variance,
     }
 }
 
@@ -431,6 +449,8 @@ fn plot_tick_receive_times(
 fn plot_evidence_len_vs_simulation_metrics(
     connection_profile: &ConnectionProfile,
     client_profile: &ClientProfile,
+    key_name: &str,
+    key_map: impl Fn(&EvaluationMetrics) -> f64,
 ) {
     let tick_time_delta = GameTimeDelta::from_secs(1.0 / 16.0);
     let game_time_delay = 2.0 * tick_time_delta;
@@ -455,7 +475,7 @@ fn plot_evidence_len_vs_simulation_metrics(
     axes.set_title(&escape_gnuplot(&title), &[])
         .set_legend(Graph(0.5), Graph(0.9), &[], &[])
         .set_x_label("max evidence len", &[])
-        .set_y_label("MSE: game time", &[]);
+        .set_y_label(key_name, &[]);
 
     let settings = vec![
         (
@@ -551,7 +571,7 @@ fn plot_evidence_len_vs_simulation_metrics(
                             num_ticks,
                         );
                         let metrics = evaluate_simulation_output(&simulation_output);
-                        metrics.game_time_mean_squared_error
+                        key_map(&metrics)
                     })
                     .sum::<f64>()
                     / num_trials as f64
@@ -576,8 +596,16 @@ fn main() {
     let tick_time_delta = GameTimeDelta::from_secs(1.0 / 16.0);
 
     plot_evidence_len_vs_simulation_metrics(
-        &ConnectionProfile::OKAYISH,
+        &ConnectionProfile::OKAY,
         &ClientProfile::SOLID_60HZ,
+        "warp factor variance",
+        |metrics| metrics.warp_factor_variance,
+    );
+    plot_evidence_len_vs_simulation_metrics(
+        &ConnectionProfile::OKAY,
+        &ClientProfile::SOLID_60HZ,
+        "game time MSE",
+        |metrics| metrics.game_time_mean_squared_error,
     );
 
     {
