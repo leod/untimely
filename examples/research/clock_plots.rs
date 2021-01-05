@@ -747,10 +747,10 @@ fn main() {
             game_time_delay,
             time_warp_function,
             TimeMappingConfig {
-                max_evidence_len: 16,
+                max_evidence_len: 24,
                 tick_time_delta,
                 ignore_if_out_of_order: false,
-                ema_alpha: Some(0.1),
+                ema_alpha: Some(0.5),
             },
         );
         let num_ticks = 1024;
