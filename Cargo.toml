@@ -18,3 +18,8 @@ rand_distr = "0.4"
 [[example]]
 name = "clock_plots"
 path = "examples/research/clock_plots.rs"
+
+[workspace]
+members = [
+    "examples/box_game",
+]
