@@ -22,7 +22,7 @@ pub struct Player {
 
 impl Player {
     pub const MOVE_SPEED: f32 = 200.0;
-    pub const SIZE: f32 = 25.0;
+    pub const SIZE: f32 = 15.0;
 
     pub fn aa_rect(&self) -> AaRect {
         AaRect {
@@ -56,13 +56,13 @@ impl Default for Game {
             (
                 PlayerId(0),
                 Player {
-                    pos: Point2::new(100.0, 100.0),
+                    pos: Point2::new(50.0, Game::MAP_HEIGHT / 2.0),
                 },
             ),
             (
                 PlayerId(1),
                 Player {
-                    pos: Point2::new(300.0, 100.0),
+                    pos: Point2::new(Game::MAP_WIDTH - 50.0, Game::MAP_HEIGHT / 2.0),
                 },
             ),
         ];
@@ -77,6 +77,9 @@ impl Default for Game {
 }
 
 impl Game {
+    pub const MAP_WIDTH: f32 = 320.0;
+    pub const MAP_HEIGHT: f32 = 240.0;
+
     pub fn run_input(&mut self, player_id: PlayerId, input: &Input) {
         let dt = self.tick_time_delta.to_secs_f32();
 
@@ -144,18 +147,28 @@ impl Game {
     }
 
     fn walls() -> Vec<Wall> {
+        let border_size = 20.0;
+
         vec![
             Wall(AaRect {
-                center: Point2::new(0.0, 200.0),
-                size: Vector2::new(50.0, 400.0),
+                center: Point2::new(0.0, 0.0),
+                size: Vector2::new(border_size, 2.0 * Self::MAP_HEIGHT),
             }),
             Wall(AaRect {
-                center: Point2::new(400.0, 200.0),
-                size: Vector2::new(50.0, 400.0),
+                center: Point2::new(0.0, 0.0),
+                size: Vector2::new(2.0 * Self::MAP_WIDTH, border_size),
             }),
             Wall(AaRect {
-                center: Point2::new(200.0, 0.0),
-                size: Vector2::new(200.0, 50.0),
+                center: Point2::new(Self::MAP_WIDTH, Self::MAP_HEIGHT),
+                size: Vector2::new(border_size, 2.0 * Self::MAP_HEIGHT),
+            }),
+            Wall(AaRect {
+                center: Point2::new(Self::MAP_WIDTH, Self::MAP_HEIGHT),
+                size: Vector2::new(2.0 * Self::MAP_WIDTH, border_size),
+            }),
+            Wall(AaRect {
+                center: Point2::new(Self::MAP_WIDTH / 2.0, Self::MAP_HEIGHT / 2.0),
+                size: Vector2::new(border_size, Self::MAP_HEIGHT * 0.618),
             }),
         ]
     }

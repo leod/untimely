@@ -2,6 +2,7 @@ use malen::{
     draw::{ColPass, ColVertex, Font, TextBatch, TriBatch},
     AaRect, Camera, Canvas, Color4,
 };
+use nalgebra::Matrix3;
 
 use untimely::PlayerId;
 
@@ -24,13 +25,12 @@ impl DrawGame {
         &mut self,
         canvas: &Canvas,
         game: &Game,
-        camera: &Camera,
+        view: &Matrix3<f32>,
     ) -> Result<(), malen::Error> {
         self.tri_col_batch.clear();
         self.render(game);
 
-        let transform = canvas.screen_geom().orthographic_projection()
-            * camera.to_matrix(&canvas.screen_geom());
+        let transform = canvas.screen_geom().orthographic_projection() * view;
 
         self.col_pass
             .draw(&transform, &self.tri_col_batch.draw_unit())?;

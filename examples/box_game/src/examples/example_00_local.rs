@@ -1,6 +1,4 @@
 use malen::{Camera, Canvas, Color4};
-use nalgebra::Point2;
-
 use untimely::{LocalTimeDelta, PeriodicTimer, PlayerId};
 
 use crate::{draw::DrawGame, examples::Example, game::Game};
@@ -44,12 +42,8 @@ impl Example for MyExample {
     fn draw(&mut self) -> Result<(), malen::Error> {
         self.canvas.clear(Color4::new(0.0, 0.0, 0.0, 1.0));
 
-        let camera = Camera {
-            center: Point2::new(150.0, 150.0),
-            angle: 0.0,
-            zoom: 0.5,
-        };
-        self.draw_game.draw(&self.canvas, &self.game, &camera)?;
+        let view = Camera::screen_view_matrix(&self.canvas.screen_geom());
+        self.draw_game.draw(&self.canvas, &self.game, &view)?;
 
         Ok(())
     }
