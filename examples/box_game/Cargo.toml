@@ -16,11 +16,11 @@ log = "0.4"
 console_error_panic_hook = "0.1"
 nalgebra = "0.23"
 
-rand = "0.7"
-rand_distr = "0.3"
+rand = "0.8"
+rand_distr = "0.4"
 
 # This is necessary so that thread_rng() does not panic on wasm targets
-getrandom = { version = "0.1", features = ["wasm-bindgen"] }
+getrandom = { version = "0.2", features = ["js"] }
 
 malen = { git = "https://github.com/leod/malen.git" }
 untimely = { path = "../../" }
