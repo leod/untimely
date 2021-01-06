@@ -4,7 +4,7 @@ use nalgebra::{Point2, Vector2};
 
 use malen::AaRect;
 
-use untimely::{EntityId, PlayerId};
+use untimely::{EntityId, GameTimeDelta, PlayerId};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Input {
@@ -22,7 +22,7 @@ pub struct Player {
 
 impl Player {
     pub const MOVE_SPEED: f32 = 100.0;
-    pub const SIZE: f32 = 50.0;
+    pub const SIZE: f32 = 25.0;
 
     pub fn aa_rect(&self) -> AaRect {
         AaRect {
@@ -44,6 +44,7 @@ pub struct Wall(pub AaRect);
 
 #[derive(Debug, Clone)]
 pub struct Game {
+    pub tick_time_delta: GameTimeDelta,
     pub players: BTreeMap<PlayerId, Player>,
     pub bullets: BTreeMap<EntityId, Bullet>,
     pub walls: Vec<Wall>,
@@ -67,6 +68,7 @@ impl Game {
         ];
 
         Self {
+            tick_time_delta: GameTimeDelta::from_hz(16.0),
             players: players.into_iter().collect(),
             bullets: BTreeMap::new(),
             walls: Self::walls(),
@@ -74,10 +76,12 @@ impl Game {
     }
 
     pub fn run_input(&mut self, player_id: PlayerId, input: &Input) {
+        let dt = self.tick_time_delta.to_secs_f32();
+
         if let Some(mut player) = self.players.get(&player_id).cloned() {
             let move_dir = Self::input_to_move_dir(input);
 
-            player.pos += move_dir * Player::MOVE_SPEED;
+            player.pos += move_dir * Player::MOVE_SPEED * dt;
 
             self.players.insert(player_id, player);
         }

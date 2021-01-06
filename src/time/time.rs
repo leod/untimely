@@ -22,8 +22,20 @@ macro_rules! impl_time_type {
                 Self::from_secs(millis / 1000.0)
             }
 
+            pub fn from_hz(hz: f64) -> Self {
+                Self::from_secs(1.0 / hz)
+            }
+
+            pub fn from_duration(duration: std::time::Duration) -> Self {
+                Self::from_secs(duration.as_secs_f64())
+            }
+
             pub fn to_secs(self) -> f64 {
                 self.0
+            }
+
+            pub fn to_secs_f32(self) -> f32 {
+                self.to_secs() as f32
             }
 
             pub fn to_mins(self) -> f64 {

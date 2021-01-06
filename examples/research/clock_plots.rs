@@ -568,7 +568,7 @@ fn plot_evidence_len_vs_simulation_metrics(
     key_name: &str,
     key_map: impl Fn(&EvaluationMetrics) -> f64,
 ) {
-    let tick_time_delta = GameTimeDelta::from_secs(1.0 / 16.0);
+    let tick_time_delta = GameTimeDelta::from_hz(16.0);
     let game_time_delay = 2.0 * tick_time_delta;
     let num_ticks = 1024;
     let num_trials = 16;

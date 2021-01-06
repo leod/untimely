@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use malen::{Camera, Canvas, Color4, InputState, Key};
 
-use untimely::PlayerId;
+use untimely::{LocalTimeDelta, PeriodicTimer, PlayerId};
 
 use draw::DrawGame;
 use game::{Game, Input};
@@ -33,12 +33,17 @@ pub fn main() {
     let mut draw_game = DrawGame::new(&canvas).unwrap();
 
     let mut game = Game::new();
+    let mut tick_timer = PeriodicTimer::new(game.tick_time_delta.to_local_time_delta());
 
     malen::main_loop(move |dt, _running| {
         while let Some(_) = canvas.pop_event() {}
 
-        let input = current_game_input(canvas.input_state());
-        game.run_input(PlayerId(0), &input);
+        tick_timer.add_time_delta(LocalTimeDelta::from_duration(dt));
+
+        if tick_timer.trigger() {
+            let input = current_game_input(canvas.input_state());
+            game.run_input(PlayerId(0), &input);
+        }
 
         let screen_geom = canvas.screen_geom();
         canvas.clear(Color4::new(0.0, 0.0, 0.0, 1.0));

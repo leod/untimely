@@ -6,7 +6,7 @@ pub mod util;
 
 pub use tick_buffer::{ReceiverTickBuffer, SenderTickBuffer};
 pub use time::{
-    GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta, TimeMapping,
-    TimeMappingConfig,
+    GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, PeriodicTimer, TickNum, TickNumDelta,
+    TimeMapping, TimeMappingConfig,
 };
 pub use types::{EntityId, PlayerId};
