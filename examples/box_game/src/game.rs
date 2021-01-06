@@ -21,7 +21,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub const MOVE_SPEED: f32 = 100.0;
+    pub const MOVE_SPEED: f32 = 200.0;
     pub const SIZE: f32 = 25.0;
 
     pub fn aa_rect(&self) -> AaRect {
@@ -80,19 +80,43 @@ impl Game {
 
         if let Some(mut player) = self.players.get(&player_id).cloned() {
             let move_dir = Self::input_to_move_dir(input);
-
             player.pos += move_dir * Player::MOVE_SPEED * dt;
+
+            for wall in self.walls.iter() {
+                if let Some(response_vector) = Self::check_overlap(player.aa_rect(), wall.0) {
+                    player.pos += response_vector;
+                }
+            }
 
             self.players.insert(player_id, player);
         }
     }
 
-    fn correct_delta_for_collision(&self, a: AaRect, b: AaRect, a_delta: &mut Vector2<f32>) {
-        let a_start_pos = a.center;
-        let a_end_pos = a.center + *a_delta;
-        let b_pos = b.center;
+    fn check_overlap(a: AaRect, b: AaRect) -> Option<Vector2<f32>> {
+        // Top left
+        let a_min = a.center - a.size / 2.0;
+        let b_min = b.center - b.size / 2.0;
 
-        //let overlap_x =
+        // Bottom right
+        let a_max = a.center + a.size / 2.0;
+        let b_max = b.center + b.size / 2.0;
+
+        let overlap_x = Self::range_overlap(a_min.x, a_max.x, b_min.x, b_max.x);
+        let overlap_y = Self::range_overlap(a_min.y, a_max.y, b_min.y, b_max.y);
+
+        if overlap_x > 0.0 && overlap_y > 0.0 {
+            if overlap_x < overlap_y {
+                Some((a_max.x - b_max.x).signum() * Vector2::new(overlap_x, 0.0))
+            } else {
+                Some((a_max.y - b_max.y).signum() * Vector2::new(0.0, overlap_y))
+            }
+        } else {
+            None
+        }
+    }
+
+    fn range_overlap(min_a: f32, max_a: f32, min_b: f32, max_b: f32) -> f32 {
+        (max_a.min(max_b) - min_a.max(min_b)).max(0.0)
     }
 
     fn input_to_move_dir(input: &Input) -> Vector2<f32> {

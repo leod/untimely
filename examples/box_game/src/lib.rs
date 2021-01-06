@@ -45,10 +45,9 @@ pub fn main() {
             game.run_input(PlayerId(0), &input);
         }
 
-        let screen_geom = canvas.screen_geom();
         canvas.clear(Color4::new(0.0, 0.0, 0.0, 1.0));
         let camera = Camera {
-            center: Point2::origin(),
+            center: Point2::new(150.0, 150.0),
             angle: 0.0,
             zoom: 1.0,
         };
