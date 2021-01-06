@@ -1,5 +1,6 @@
 use crate::LocalTimeDelta;
 
+#[derive(Debug, Copy, Clone)]
 pub struct PeriodicTimer {
     period: LocalTimeDelta,
     accumulator: LocalTimeDelta,

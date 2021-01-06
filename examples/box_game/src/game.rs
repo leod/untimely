@@ -50,8 +50,8 @@ pub struct Game {
     pub walls: Vec<Wall>,
 }
 
-impl Game {
-    pub fn new() -> Self {
+impl Default for Game {
+    fn default() -> Self {
         let players = vec![
             (
                 PlayerId(0),
@@ -74,7 +74,9 @@ impl Game {
             walls: Self::walls(),
         }
     }
+}
 
+impl Game {
     pub fn run_input(&mut self, player_id: PlayerId, input: &Input) {
         let dt = self.tick_time_delta.to_secs_f32();
 
