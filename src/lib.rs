@@ -9,4 +9,4 @@ pub use time::{
     GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta, TimeMapping,
     TimeMappingConfig,
 };
-pub use types::{PlayerId, EntityId};
+pub use types::{EntityId, PlayerId};

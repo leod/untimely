@@ -146,11 +146,23 @@ macro_rules! impl_time_type {
             }
         }
 
+        impl std::ops::SubAssign<$delta> for $delta {
+            fn sub_assign(&mut self, other: $delta) {
+                *self = *self - other;
+            }
+        }
+
         impl std::ops::Add<$delta> for $delta {
             type Output = $delta;
 
             fn add(self, other: $delta) -> Self {
                 $delta(self.0 + other.0)
+            }
+        }
+
+        impl std::ops::AddAssign<$delta> for $delta {
+            fn add_assign(&mut self, other: $delta) {
+                *self = *self + other;
             }
         }
 

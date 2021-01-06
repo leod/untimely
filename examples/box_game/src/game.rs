@@ -76,7 +76,6 @@ impl Game {
     pub fn run_input(&mut self, player_id: PlayerId, input: &Input) {
         if let Some(mut player) = self.players.get(&player_id).cloned() {
             let move_dir = Self::input_to_move_dir(input);
-            log::info!("{:?} {:?}", input, move_dir);
 
             player.pos += move_dir * Player::MOVE_SPEED;
 

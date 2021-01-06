@@ -1,9 +1,10 @@
 mod draw;
 mod game;
 
-use malen::{Camera, Canvas, InputState, Key};
 use nalgebra::Point2;
 use wasm_bindgen::prelude::wasm_bindgen;
+
+use malen::{Camera, Canvas, Color4, InputState, Key};
 
 use untimely::PlayerId;
 
@@ -29,9 +30,9 @@ pub fn main() {
     let mut canvas = Canvas::from_element_id("canvas").unwrap();
     log::info!("Initialized malen context");
 
-    let mut draw_game = draw::DrawGame::new(&canvas).unwrap();
+    let mut draw_game = DrawGame::new(&canvas).unwrap();
 
-    let mut game = game::Game::new();
+    let mut game = Game::new();
 
     malen::main_loop(move |dt, _running| {
         while let Some(_) = canvas.pop_event() {}
@@ -40,11 +41,7 @@ pub fn main() {
         game.run_input(PlayerId(0), &input);
 
         let screen_geom = canvas.screen_geom();
-        canvas
-            .golem_ctx()
-            .set_viewport(0, 0, screen_geom.size.x as u32, screen_geom.size.y as u32);
-        canvas.golem_ctx().set_clear_color(0.0, 0.0, 0.0, 1.0);
-        canvas.golem_ctx().clear();
+        canvas.clear(Color4::new(0.0, 0.0, 0.0, 1.0));
         let camera = Camera {
             center: Point2::origin(),
             angle: 0.0,

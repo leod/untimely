@@ -10,7 +10,7 @@ pub trait ClientGameClock {
 }
 
 #[derive(Debug, Clone)]
-pub struct DelayedTimeMappingClock {
+pub struct DelayedGameClock {
     tick_time_delta: GameTimeDelta,
     game_time_delay: GameTimeDelta,
     time_warp_function: TimeWarpFunction,
@@ -44,7 +44,7 @@ impl TimeWarpFunction {
     }
 }
 
-impl DelayedTimeMappingClock {
+impl DelayedGameClock {
     pub fn new(
         game_time_delay: GameTimeDelta,
         time_warp_function: TimeWarpFunction,
@@ -52,7 +52,7 @@ impl DelayedTimeMappingClock {
     ) -> Self {
         assert!(game_time_delay > GameTimeDelta::ZERO);
 
-        DelayedTimeMappingClock {
+        DelayedGameClock {
             tick_time_delta: time_mapping_config.tick_time_delta,
             game_time_delay,
             time_warp_function,
@@ -65,7 +65,7 @@ impl DelayedTimeMappingClock {
     }
 }
 
-impl ClientGameClock for DelayedTimeMappingClock {
+impl ClientGameClock for DelayedGameClock {
     fn record_receive_event(&mut self, local_time: LocalTime, received_tick_num: TickNum) {
         let game_time = received_tick_num.to_game_time(self.tick_time_delta);
         self.time_mapping.record_evidence(local_time, game_time);

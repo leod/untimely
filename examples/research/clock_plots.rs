@@ -8,7 +8,7 @@ use gnuplot::{AutoOption, AxesCommon, Caption, DashType, Figure, Graph, LineStyl
 use pareen::AnimBox;
 
 use untimely::{
-    time::{ClientGameClock, DelayedTimeMappingClock, TimeWarpFunction},
+    time::{ClientGameClock, DelayedGameClock, TimeWarpFunction},
     GameTime, GameTimeDelta, LocalTime, LocalTimeDelta, TickNum, TickNumDelta, TimeMappingConfig,
 };
 
@@ -673,7 +673,7 @@ fn plot_evidence_len_vs_simulation_metrics(
             .map(|max_evidence_len| {
                 (0..num_trials)
                     .map(|_| {
-                        let client_game_clock = DelayedTimeMappingClock::new(
+                        let client_game_clock = DelayedGameClock::new(
                             game_time_delay,
                             time_warp_function.clone(),
                             TimeMappingConfig {
@@ -743,7 +743,7 @@ fn main() {
         };
         //let time_warp_function = TimeWarpFunction::Catcheb;
 
-        let client_game_clock = DelayedTimeMappingClock::new(
+        let client_game_clock = DelayedGameClock::new(
             game_time_delay,
             time_warp_function,
             TimeMappingConfig {
