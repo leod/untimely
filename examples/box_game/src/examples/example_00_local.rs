@@ -40,12 +40,16 @@ impl Example for MyExample {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        self.canvas.clear(Color4::new(0.0, 0.0, 0.0, 1.0));
+        self.canvas.clear(Color4::new(0.8, 0.8, 0.8, 1.0));
 
         let transform = self.canvas.screen_geom().orthographic_projection()
             * Camera::screen_view_matrix(&self.canvas.screen_geom());
-        self.draw_game.draw(&self.canvas, &self.game, &transform)?;
+        self.draw_game.draw(&self.canvas, &transform, &self.game)?;
 
         Ok(())
+    }
+
+    fn is_active(&self) -> bool {
+        self.canvas.has_focus()
     }
 }

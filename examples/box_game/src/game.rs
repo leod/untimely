@@ -4,7 +4,7 @@ use nalgebra::{Point2, Vector2};
 
 use malen::AaRect;
 
-use untimely::{EntityId, GameTimeDelta, PlayerId};
+use untimely::{EntityId, GameTime, GameTimeDelta, PlayerId, TickNum};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct GameInput {
@@ -44,6 +44,7 @@ pub struct Wall(pub AaRect);
 
 #[derive(Debug, Clone)]
 pub struct Game {
+    pub tick_num: TickNum,
     pub tick_time_delta: GameTimeDelta,
     pub players: BTreeMap<PlayerId, Player>,
     pub bullets: BTreeMap<EntityId, Bullet>,
@@ -68,6 +69,7 @@ impl Default for Game {
         ];
 
         Self {
+            tick_num: TickNum::ZERO,
             tick_time_delta: GameTimeDelta::from_hz(32.0),
             players: players.into_iter().collect(),
             bullets: BTreeMap::new(),
@@ -79,6 +81,10 @@ impl Default for Game {
 impl Game {
     pub const MAP_WIDTH: f32 = 320.0;
     pub const MAP_HEIGHT: f32 = 240.0;
+
+    pub fn game_time(&self) -> GameTime {
+        self.tick_num.to_game_time(self.tick_time_delta)
+    }
 
     pub fn run_input(&mut self, player_id: PlayerId, input: &GameInput) {
         let dt = self.tick_time_delta.to_secs_f32();
@@ -147,7 +153,7 @@ impl Game {
     }
 
     fn walls() -> Vec<Wall> {
-        let border_size = 20.0;
+        let border_size = 15.0;
 
         vec![
             Wall(AaRect {
@@ -168,7 +174,7 @@ impl Game {
             }),
             Wall(AaRect {
                 center: Point2::new(Self::MAP_WIDTH / 2.0, Self::MAP_HEIGHT / 2.0),
-                size: Vector2::new(border_size, Self::MAP_HEIGHT * 0.618),
+                size: Vector2::new(border_size * 2.0, Self::MAP_HEIGHT * 0.618),
             }),
         ]
     }

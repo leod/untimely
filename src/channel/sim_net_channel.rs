@@ -71,7 +71,7 @@ impl NetProfile {
     pub fn wonky_slow_profile() -> Self {
         Self::new(NetParams {
             latency_mean_millis: 100.0,
-            latency_std_dev: 10.0,
+            latency_std_dev: 20.0,
             loss: 0.025,
         })
     }

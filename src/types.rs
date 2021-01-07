@@ -4,7 +4,7 @@ pub struct EntityId(pub u32);
 impl EntityId {
     pub const ZERO: EntityId = EntityId(0);
 
-    pub fn to_next(self) -> Self {
+    pub fn get_next(self) -> Self {
         EntityId(self.0 + 1)
     }
 }
@@ -13,7 +13,7 @@ impl EntityId {
 pub struct PlayerId(pub u32);
 
 impl PlayerId {
-    pub fn to_next(self) -> Self {
+    pub fn get_next(self) -> Self {
         PlayerId(self.0 + 1)
     }
 }

@@ -20,7 +20,9 @@ pub fn main() {
         let dt = dt.min(LocalTimeDelta::from_secs(1.0));
 
         for example in examples.iter_mut() {
-            example.update(dt);
+            if example.is_active() {
+                example.update(dt);
+            }
         }
 
         for example in examples.iter_mut() {

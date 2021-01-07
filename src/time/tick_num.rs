@@ -2,18 +2,19 @@ use std::ops::{Add, AddAssign};
 
 use crate::time::{GameTime, GameTimeDelta};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TickNumDelta(u64);
 
 impl TickNumDelta {
     pub const ZERO: TickNumDelta = TickNumDelta(0);
+    pub const ONE: TickNumDelta = TickNumDelta(1);
 
     pub fn to_game_time_delta(self, tick_time_delta: GameTimeDelta) -> GameTimeDelta {
         self.0 as f64 * tick_time_delta
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TickNum(TickNumDelta);
 
 impl TickNum {
@@ -25,6 +26,10 @@ impl TickNum {
 
     pub fn to_delta(self) -> TickNumDelta {
         self.0
+    }
+
+    pub fn get_next(self) -> Self {
+        self + TickNumDelta::ONE
     }
 }
 

@@ -22,5 +22,6 @@ rand_distr = "0.4"
 # This is necessary so that thread_rng() does not panic on wasm targets
 getrandom = { version = "0.2", features = ["js"] }
 
-malen = { git = "https://github.com/leod/malen.git" }
+#malen = { git = "https://github.com/leod/malen.git" }
+malen = { path = "../../../malen" }
 untimely = { path = "../../" }
