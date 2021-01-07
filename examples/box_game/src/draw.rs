@@ -2,21 +2,29 @@ use malen::{
     draw::{ColPass, ColVertex, Font, TextBatch, TriBatch},
     AaRect, Camera, Canvas, Color4, ScreenGeom,
 };
-use nalgebra::{Matrix3, Point2, Vector2};
+use nalgebra::{Matrix3, Point2, Point3, Vector2};
 
 use untimely::PlayerId;
 
 use crate::game::{Bullet, Game, Player, Wall};
 
 pub struct DrawGame {
+    font: Font,
     tri_col_batch: TriBatch<ColVertex>,
+    text_batch: TextBatch,
     col_pass: ColPass,
 }
 
 impl DrawGame {
     pub fn new(canvas: &Canvas) -> Result<Self, malen::Error> {
         Ok(Self {
+            font: Font::from_bytes(
+                canvas,
+                include_bytes!("../resources/Roboto-Regular.ttf").to_vec(),
+                30.0,
+            )?,
             tri_col_batch: TriBatch::new(canvas)?,
+            text_batch: TextBatch::new(canvas)?,
             col_pass: ColPass::new(canvas)?,
         })
     }
@@ -28,6 +36,8 @@ impl DrawGame {
         transform: &Matrix3<f32>,
     ) -> Result<(), malen::Error> {
         self.tri_col_batch.clear();
+        self.text_batch.clear();
+
         self.render(game);
 
         self.col_pass
@@ -56,6 +66,16 @@ impl DrawGame {
                 screen_geom.orthographic_projection() * Camera::screen_view_matrix(&screen_geom);
 
             self.draw(canvas, game, &transform)?;
+
+            self.font.write(
+                30.0,
+                Point3::new(15.0, 15.0, 0.0),
+                Color4::new(0.8, 0.8, 0.8, 1.0),
+                name,
+                &mut self.text_batch,
+            );
+            self.font
+                .draw(canvas, &transform, &self.text_batch.draw_unit())?;
         }
 
         Ok(())
