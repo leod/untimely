@@ -1,9 +1,9 @@
 use malen::{InputState, Key};
 
-use crate::game::Input;
+use crate::game::GameInput;
 
-pub fn current_game_input(input_state: &InputState) -> Input {
-    Input {
+pub fn current_game_input(input_state: &InputState) -> GameInput {
+    GameInput {
         left: input_state.key(Key::A),
         right: input_state.key(Key::D),
         up: input_state.key(Key::W),

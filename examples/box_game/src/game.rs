@@ -7,7 +7,7 @@ use malen::AaRect;
 use untimely::{EntityId, GameTimeDelta, PlayerId};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct Input {
+pub struct GameInput {
     pub left: bool,
     pub right: bool,
     pub up: bool,
@@ -80,7 +80,7 @@ impl Game {
     pub const MAP_WIDTH: f32 = 320.0;
     pub const MAP_HEIGHT: f32 = 240.0;
 
-    pub fn run_input(&mut self, player_id: PlayerId, input: &Input) {
+    pub fn run_input(&mut self, player_id: PlayerId, input: &GameInput) {
         let dt = self.tick_time_delta.to_secs_f32();
 
         if let Some(mut player) = self.players.get(&player_id).cloned() {
@@ -124,7 +124,7 @@ impl Game {
         (max_a.min(max_b) - min_a.max(min_b)).max(0.0)
     }
 
-    fn input_to_move_dir(input: &Input) -> Vector2<f32> {
+    fn input_to_move_dir(input: &GameInput) -> Vector2<f32> {
         let mut dir = Vector2::zeros();
         if input.left {
             dir.x -= 1.0;

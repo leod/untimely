@@ -38,6 +38,8 @@ impl DrawGame {
         Ok(())
     }
 
+    pub fn draw_multiple(&mut self, canvas: &Canvas, games: &[(&str, &Game)]) {}
+
     fn render(&mut self, game: &Game) {
         for (player_id, player) in game.players.iter() {
             self.render_player(*player_id, player);

@@ -17,7 +17,7 @@ pub fn main() {
 
     malen::main_loop(move |dt, _running| {
         let dt = LocalTimeDelta::from_duration(dt);
-        let dt = dt.min(LocalTimeDelta::from_secs(10.0));
+        let dt = dt.min(LocalTimeDelta::from_secs(1.0));
 
         for example in examples.iter_mut() {
             example.update(dt);

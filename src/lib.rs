@@ -1,7 +1,7 @@
-mod channel;
 mod tick_buffer;
 mod types;
 
+pub mod channel;
 pub mod time;
 pub mod util;
 

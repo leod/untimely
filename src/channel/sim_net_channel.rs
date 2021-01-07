@@ -102,12 +102,30 @@ impl<T> SimNetChannel<T> {
         let rng = &mut rand::thread_rng();
 
         let net_params = self.profile.net_params(current_time.to_delta());
-        let arrival_time = net_params.sample(rng);
 
         if let Some(arrival_time) = net_params.sample(rng) {
             self.messages_in_transit
-                .push(Entry(LocalTime::ZERO + arrival_time, message));
+                .push(Entry(current_time + arrival_time, message));
         }
+    }
+
+    pub fn send_iter<I>(&mut self, current_time: LocalTime, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let iter = iter.into_iter();
+
+        for message in iter {
+            self.send(current_time, message);
+        }
+    }
+
+    pub fn set_profile(&mut self, profile: NetProfile) {
+        self.profile = profile;
+    }
+
+    pub fn get_profile(&self) -> &NetProfile {
+        &self.profile
     }
 
     pub fn receive(&mut self, current_time: LocalTime) -> Option<(LocalTime, T)> {
@@ -121,6 +139,14 @@ impl<T> SimNetChannel<T> {
         } else {
             None
         }
+    }
+
+    pub fn receive_all(&mut self, current_time: LocalTime) -> Vec<(LocalTime, T)> {
+        let mut result = Vec::new();
+        while let Some(message) = self.receive(current_time) {
+            result.push(message);
+        }
+        result
     }
 }
 
