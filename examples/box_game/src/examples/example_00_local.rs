@@ -42,8 +42,9 @@ impl Example for MyExample {
     fn draw(&mut self) -> Result<(), malen::Error> {
         self.canvas.clear(Color4::new(0.0, 0.0, 0.0, 1.0));
 
-        let view = Camera::screen_view_matrix(&self.canvas.screen_geom());
-        self.draw_game.draw(&self.canvas, &self.game, &view)?;
+        let transform = self.canvas.screen_geom().orthographic_projection()
+            * Camera::screen_view_matrix(&self.canvas.screen_geom());
+        self.draw_game.draw(&self.canvas, &self.game, &transform)?;
 
         Ok(())
     }

@@ -1,8 +1,8 @@
 use malen::{
     draw::{ColPass, ColVertex, Font, TextBatch, TriBatch},
-    AaRect, Camera, Canvas, Color4,
+    AaRect, Camera, Canvas, Color4, ScreenGeom,
 };
-use nalgebra::Matrix3;
+use nalgebra::{Matrix3, Point2, Vector2};
 
 use untimely::PlayerId;
 
@@ -25,20 +25,41 @@ impl DrawGame {
         &mut self,
         canvas: &Canvas,
         game: &Game,
-        view: &Matrix3<f32>,
+        transform: &Matrix3<f32>,
     ) -> Result<(), malen::Error> {
         self.tri_col_batch.clear();
         self.render(game);
 
-        let transform = canvas.screen_geom().orthographic_projection() * view;
-
         self.col_pass
-            .draw(&transform, &self.tri_col_batch.draw_unit())?;
+            .draw(transform, &self.tri_col_batch.draw_unit())?;
 
         Ok(())
     }
 
-    pub fn draw_multiple(&mut self, canvas: &Canvas, games: &[(&str, &Game)]) {}
+    pub fn draw_multiple(
+        &mut self,
+        canvas: &Canvas,
+        games: &[(&str, &Game)],
+    ) -> Result<(), malen::Error> {
+        // TODO: Need to consider device_pixel_ratio here?
+        let screen_geom = ScreenGeom {
+            size: Vector2::new(Game::MAP_WIDTH as u32, Game::MAP_HEIGHT as u32),
+            device_pixel_ratio: canvas.screen_geom().device_pixel_ratio,
+        };
+
+        for (i, (name, game)) in games.iter().enumerate() {
+            canvas.set_viewport(
+                Point2::new(i as u32 * Game::MAP_WIDTH as u32, 0),
+                screen_geom.size,
+            );
+            let transform =
+                screen_geom.orthographic_projection() * Camera::screen_view_matrix(&screen_geom);
+
+            self.draw(canvas, game, &transform)?;
+        }
+
+        Ok(())
+    }
 
     fn render(&mut self, game: &Game) {
         for (player_id, player) in game.players.iter() {

@@ -21,7 +21,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub const MOVE_SPEED: f32 = 200.0;
+    pub const MOVE_SPEED: f32 = 350.0;
     pub const SIZE: f32 = 15.0;
 
     pub fn aa_rect(&self) -> AaRect {
@@ -68,7 +68,7 @@ impl Default for Game {
         ];
 
         Self {
-            tick_time_delta: GameTimeDelta::from_hz(16.0),
+            tick_time_delta: GameTimeDelta::from_hz(32.0),
             players: players.into_iter().collect(),
             bullets: BTreeMap::new(),
             walls: Self::walls(),

@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use malen::{Camera, Canvas, Color4, InputState};
+use nalgebra::Point2;
 use untimely::{
     channel::{NetProfile, SimNetChannel},
     LocalTime, LocalTimeDelta, PeriodicTimer, PlayerId, TickNum,
@@ -34,7 +35,7 @@ struct MyServer {
 }
 
 struct MyClient {
-    game: Option<(TickNum, Game)>,
+    game: (TickNum, Game),
 }
 
 impl MyServer {
@@ -66,7 +67,9 @@ impl MyServer {
 
 impl MyClient {
     fn new() -> Self {
-        Self { game: None }
+        Self {
+            game: (TickNum::ZERO, Game::default()),
+        }
     }
 
     fn update(
@@ -83,6 +86,8 @@ impl MyClient {
         // In this example, we only send input for the first player.
         // We simply send input whenever we receive a new tick to start.
         for server_msg in received_msgs {
+            self.game = server_msg.1.clone();
+
             if my_player_id == PlayerId(0) {
                 msgs_to_send.push((my_player_id, current_game_input.clone()));
             }
@@ -108,7 +113,7 @@ impl MyExample {
         let client_to_server = SimNetChannel::new(NetProfile::wonky_slow_profile());
         let server_to_client = SimNetChannel::new(NetProfile::wonky_slow_profile());
 
-        let canvas = Canvas::from_element_id("example_server_client")?;
+        let canvas = Canvas::from_element_id("example_client_server")?;
         let draw_game = DrawGame::new(&canvas)?;
 
         Ok(Self {
@@ -166,11 +171,18 @@ impl Example for MyExample {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
+        self.canvas
+            .set_viewport(Point2::origin(), self.canvas.screen_geom().size);
         self.canvas.clear(Color4::new(0.0, 0.0, 0.0, 1.0));
 
-        let view = Camera::screen_view_matrix(&self.canvas.screen_geom());
-        self.draw_game
-            .draw(&self.canvas, &self.server.game.1, &view)?;
+        self.draw_game.draw_multiple(
+            &self.canvas,
+            &[
+                ("Client 0", &self.clients[&PlayerId(0)].game.1),
+                ("Client 1", &self.clients[&PlayerId(1)].game.1),
+                ("Server", &self.server.game.1),
+            ],
+        )?;
 
         Ok(())
     }
