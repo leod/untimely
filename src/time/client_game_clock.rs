@@ -10,21 +10,6 @@ pub trait ClientGameClock {
 }
 
 #[derive(Debug, Clone)]
-pub struct DelayedGameClock {
-    tick_time_delta: GameTimeDelta,
-    game_time_delay: GameTimeDelta,
-    time_warp_function: TimeWarpFunction,
-
-    time_mapping: TimeMapping<LocalTime, GameTime>,
-
-    current_local_time: LocalTime,
-    current_game_time: GameTime,
-    current_predicted_receive_game_time: GameTime,
-
-    max_received_game_time: GameTime,
-}
-
-#[derive(Debug, Clone)]
 pub enum TimeWarpFunction {
     Sigmoid { alpha: f64, power: i32 },
     Catcheb,
@@ -42,6 +27,21 @@ impl TimeWarpFunction {
             }
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct DelayedGameClock {
+    tick_time_delta: GameTimeDelta,
+    game_time_delay: GameTimeDelta,
+    time_warp_function: TimeWarpFunction,
+
+    time_mapping: TimeMapping<LocalTime, GameTime>,
+
+    current_local_time: LocalTime,
+    current_game_time: GameTime,
+    current_predicted_receive_game_time: GameTime,
+
+    max_received_game_time: GameTime,
 }
 
 impl DelayedGameClock {
@@ -78,8 +78,9 @@ impl ClientGameClock for DelayedGameClock {
         let game_time_delta = target_game_time - self.current_game_time;
         let warp_factor = self.time_warp_function.eval(game_time_delta);
 
-        let max_allowed_game_time = self.current_game_time.max(self.max_received_game_time);
         self.current_game_time += local_time_delta.to_game_time_delta() * warp_factor;
+
+        let max_allowed_game_time = self.current_game_time.max(self.max_received_game_time);
         self.current_game_time = self.current_game_time.min(max_allowed_game_time);
 
         self.current_local_time += local_time_delta;

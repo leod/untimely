@@ -1,4 +1,4 @@
-use std::collections::BinaryHeap;
+use std::{cmp::Ordering, collections::BinaryHeap};
 
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -81,16 +81,18 @@ impl NetProfile {
     }
 }
 
+struct Entry<T>(LocalTime, T);
+
 pub struct SimNetChannel<T> {
     profile: NetProfile,
-    messages_to_be_sent: Vec<(LocalTime, T)>,
+    messages_in_transit: BinaryHeap<Entry<T>>,
 }
 
 impl<T> SimNetChannel<T> {
     pub fn new(profile: NetProfile) -> Self {
         Self {
             profile,
-            messages_to_be_sent: Vec::new(),
+            messages_in_transit: BinaryHeap::new(),
         }
     }
 
@@ -102,6 +104,42 @@ impl<T> SimNetChannel<T> {
         let net_params = self.profile.net_params(current_time.to_delta());
         let arrival_time = net_params.sample(rng);
 
-        self.messages_to_be_senca
+        if let Some(arrival_time) = net_params.sample(rng) {
+            self.messages_in_transit
+                .push(Entry(LocalTime::ZERO + arrival_time, message));
+        }
+    }
+
+    pub fn receive(&mut self, current_time: LocalTime) -> Option<(LocalTime, T)> {
+        if let Some(Entry(oldest_arrival_time, _)) = self.messages_in_transit.peek() {
+            if current_time > *oldest_arrival_time {
+                let oldest_entry = self.messages_in_transit.pop().unwrap();
+                Some((oldest_entry.0, oldest_entry.1))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> PartialOrd for Entry<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl<T> Eq for Entry<T> {}
+
+impl<T> PartialEq for Entry<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(&other) == Ordering::Equal
+    }
+}
+
+impl<T> Ord for Entry<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.0.partial_cmp(&self.0).unwrap()
     }
 }

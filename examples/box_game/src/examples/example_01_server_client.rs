@@ -11,12 +11,16 @@ pub struct MyExample {
     draw_game: DrawGame,
 }
 
+struct MyServer {}
+
+struct MyClient {}
+
 impl MyExample {
     pub fn new() -> Result<Self, malen::Error> {
         let game = Game::default();
         let tick_timer = PeriodicTimer::new(game.tick_time_delta.to_local_time_delta());
 
-        let canvas = Canvas::from_element_id("example_local_canvas")?;
+        let canvas = Canvas::from_element_id("example_server_client")?;
         let draw_game = DrawGame::new(&canvas)?;
 
         Ok(Self {
