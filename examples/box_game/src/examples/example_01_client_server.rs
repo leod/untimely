@@ -257,12 +257,10 @@ impl Example for MyExample {
 
 impl MyExample {
     fn describe_plot(&self) -> Plot {
-        let min_time = self.current_time - LocalTimeDelta::from_secs(PLOT_SECS);
-
-        let server_game_time_points = self.server_game_time_var.to_plot_points(min_time);
+        let server_game_time_points = self.server_game_time_var.to_plot_points(self.current_time);
 
         let delay_vs_server = |var: &SlidingWindowRandomVar| {
-            let points = var.to_plot_points(min_time);
+            let points = var.to_plot_points(self.current_time);
             server_game_time_points
                 .iter()
                 .zip(points.iter())
@@ -283,8 +281,7 @@ impl MyExample {
             },
             y_axis: Axis {
                 label: "game time [s]".into(),
-                range: None,
-                //range: Some((0.0, 0.3)),
+                range: Some((0.0, 0.3)),
                 tics: 0.1,
                 tic_precision: 2,
             },
@@ -298,12 +295,12 @@ impl MyExample {
                     points: delay_vs_server(&self.server_game_time_var),
                 },*/
                 LinePlotData {
-                    caption: "Client 0".into(),
+                    caption: "Tick Delay: Client 0".into(),
                     color: Color4::from_u8(100, 200, 100, 255),
                     points: delay_vs_server(&self.client_vars[&PlayerId(0)].game_time_var),
                 },
                 LinePlotData {
-                    caption: "Client 1".into(),
+                    caption: "Tick Delay: Client 1".into(),
                     color: Color4::from_u8(100, 100, 200, 255),
                     points: delay_vs_server(&self.client_vars[&PlayerId(1)].game_time_var),
                 },
