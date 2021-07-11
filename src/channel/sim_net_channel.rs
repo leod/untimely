@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::BinaryHeap};
+use std::{rc::Rc, cmp::Ordering, collections::BinaryHeap};
 
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -81,17 +81,19 @@ impl NetProfile {
     }
 }
 
+#[derive(Clone)]
 struct Entry<T>(LocalTime, T);
 
+#[derive(Clone)]
 pub struct SimNetChannel<T> {
-    profile: NetProfile,
+    profile: Rc<NetProfile>,
     messages_in_transit: BinaryHeap<Entry<T>>,
 }
 
 impl<T> SimNetChannel<T> {
     pub fn new(profile: NetProfile) -> Self {
         Self {
-            profile,
+            profile: Rc::new(profile),
             messages_in_transit: BinaryHeap::new(),
         }
     }
@@ -121,7 +123,7 @@ impl<T> SimNetChannel<T> {
     }
 
     pub fn set_profile(&mut self, profile: NetProfile) {
-        self.profile = profile;
+        self.profile = Rc::new(profile);
     }
 
     pub fn get_profile(&self) -> &NetProfile {

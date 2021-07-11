@@ -2,6 +2,7 @@
 
 # We need a HTTP server for serving the JS/WASM files. Apparently browsers will
 # refuse to accept the WASM if it simply comes from the local file system.
+#
 # I think that for Python versions 3.9+, the default http.server no longer
 # deduces MIME types from file extensions. Thus, we need this slightly modified
 # server.
