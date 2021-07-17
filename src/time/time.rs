@@ -1,7 +1,7 @@
 use std::{
-    marker::PhantomData,
-    ops::{Add, Mul, Neg, Sub},
     cmp::Ordering,
+    marker::PhantomData,
+    ops::{Add, AddAssign, Mul, Neg, Sub},
 };
 
 pub trait TimeTag: Copy {}
@@ -39,6 +39,20 @@ impl<Tag> Dt<Tag> {
     pub fn to_secs(self) -> f64 {
         self.0
     }
+
+    pub fn max(self, rhs: Self) -> Self {
+        Self::from_secs(self.to_secs().max(rhs.to_secs()))
+    }
+
+    pub fn min(self, rhs: Self) -> Self {
+        Self::from_secs(self.to_secs().min(rhs.to_secs()))
+    }
+}
+
+impl LocalDt {
+    pub fn to_game_dt(self) -> GameDt {
+        GameDt::from_secs(self.to_secs())
+    }
 }
 
 impl<Tag> Time<Tag> {
@@ -60,6 +74,14 @@ impl<Tag> Time<Tag> {
 
     pub fn to_secs(self) -> f64 {
         self.to_dt().to_secs()
+    }
+
+    pub fn max(self, rhs: Self) -> Self {
+        Self::from_dt(self.to_dt().max(rhs.to_dt()))
+    }
+
+    pub fn min(self, rhs: Self) -> Self {
+        Self::from_dt(self.to_dt().min(rhs.to_dt()))
     }
 }
 
@@ -119,6 +141,15 @@ impl<Tag> Add<Dt<Tag>> for Time<Tag> {
 
     fn add(self, rhs: Dt<Tag>) -> Self {
         Time(Dt::from_secs((self.0).0 + rhs.0))
+    }
+}
+
+impl<Tag> AddAssign<Dt<Tag>> for Time<Tag>
+where
+    Tag: Copy,
+{
+    fn add_assign(&mut self, rhs: Dt<Tag>) {
+        self.0 = self.0 + rhs;
     }
 }
 
