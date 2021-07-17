@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     marker::PhantomData,
-    ops::{Add, AddAssign, Mul, Neg, Sub},
+    ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
 };
 
 pub trait TimeTag: Copy {}
@@ -181,11 +181,29 @@ impl<Tag> Add<Dt<Tag>> for Dt<Tag> {
     }
 }
 
+impl<Tag> AddAssign<Dt<Tag>> for Dt<Tag>
+where
+    Tag: Copy,
+{
+    fn add_assign(&mut self, rhs: Dt<Tag>) {
+        *self = *self + rhs;
+    }
+}
+
 impl<Tag> Sub<Dt<Tag>> for Dt<Tag> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
         Dt::from_secs(self.0 - rhs.0)
+    }
+}
+
+impl<Tag> SubAssign<Dt<Tag>> for Dt<Tag>
+where
+    Tag: Copy,
+{
+    fn sub_assign(&mut self, rhs: Dt<Tag>) {
+        *self = *self - rhs;
     }
 }
 

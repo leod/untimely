@@ -43,7 +43,7 @@ impl PlaybackClock {
             .retain_recent_samples(local_time - self.params.max_sample_age);
     }
 
-    pub fn advance(&mut self, local_dt: LocalDt) {
+    pub fn advance(&mut self, dt: LocalDt) {
         let stream_time =
             predict_stream_time(&self.stream_samples, self.local_time).unwrap_or(GameTime::zero());
         let target_time = stream_time - self.params.delay;
@@ -56,9 +56,9 @@ impl PlaybackClock {
             .unwrap_or(GameTime::zero());
         let max_playback_time = max_stream_time + self.params.max_overtake;
 
-        self.playback_time += local_dt.to_game_dt() * time_warp(residual);
+        self.playback_time += dt.to_game_dt() * time_warp(residual);
         self.playback_time = self.playback_time.min(max_playback_time);
 
-        self.local_time += local_dt;
+        self.local_time += dt;
     }
 }
