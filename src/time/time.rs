@@ -1,19 +1,25 @@
 use std::{
     marker::PhantomData,
     ops::{Add, Mul, Neg, Sub},
+    cmp::Ordering,
 };
 
-pub trait TimeTag: PartialOrd + Copy {
-}
+pub trait TimeTag: Copy {}
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
+#[derive(Debug, Copy)]
 pub struct Dt<Tag>(f64, PhantomData<Tag>);
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
+#[derive(Debug, Copy)]
 pub struct Time<Tag>(Dt<Tag>);
 
+#[derive(Debug, Clone, Copy)]
 pub struct LocalTag;
+
+#[derive(Debug, Clone, Copy)]
 pub struct GameTag;
+
+impl TimeTag for LocalTag {}
+impl TimeTag for GameTag {}
 
 pub type GameTime = Time<GameTag>;
 pub type GameDt = Dt<GameTag>;
@@ -26,18 +32,85 @@ impl<Tag> Dt<Tag> {
         Dt(secs, PhantomData)
     }
 
+    pub fn zero() -> Self {
+        Self::from_secs(0.0)
+    }
+
     pub fn to_secs(self) -> f64 {
         self.0
     }
 }
 
 impl<Tag> Time<Tag> {
+    pub fn from_dt(dt: Dt<Tag>) -> Self {
+        Time(dt)
+    }
+
     pub fn from_secs(secs: f64) -> Self {
-        Time(Dt::from_secs(secs))
+        Self::from_dt(Dt::from_secs(secs))
+    }
+
+    pub fn zero() -> Self {
+        Self::from_dt(Dt::zero())
+    }
+
+    pub fn to_dt(self) -> Dt<Tag> {
+        self.0
     }
 
     pub fn to_secs(self) -> f64 {
-        (self.0).0
+        self.to_dt().to_secs()
+    }
+}
+
+// Due to the Tag type parameter, derive does not work, so we need to derive
+// some trait implementations by hand.
+
+impl<Tag> Clone for Dt<Tag> {
+    fn clone(&self) -> Self {
+        self.clone()
+    }
+}
+
+impl<Tag> Clone for Time<Tag> {
+    fn clone(&self) -> Self {
+        self.clone()
+    }
+}
+
+impl<Tag> Default for Dt<Tag> {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl<Tag> Default for Time<Tag> {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl<Tag> PartialEq for Dt<Tag> {
+    fn eq(&self, other: &Dt<Tag>) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+
+impl<Tag> PartialEq for Time<Tag> {
+    fn eq(&self, other: &Time<Tag>) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+
+impl<Tag> PartialOrd for Dt<Tag> {
+    fn partial_cmp(&self, other: &Dt<Tag>) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl<Tag> PartialOrd for Time<Tag> {
+    fn partial_cmp(&self, other: &Time<Tag>) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
     }
 }
 
