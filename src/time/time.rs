@@ -32,6 +32,10 @@ impl<Tag> Dt<Tag> {
         Dt(secs, PhantomData)
     }
 
+    pub fn from_millis(millis: f64) -> Self {
+        Self::from_secs(millis / 1000.0)
+    }
+
     pub fn zero() -> Self {
         Self::from_secs(0.0)
     }
