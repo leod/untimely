@@ -6,13 +6,13 @@ use rand_distr::{Distribution, Normal};
 use crate::time::{LocalDt, LocalTime};
 
 #[derive(Debug, Clone)]
-pub struct MockSocketParams {
+pub struct MockChannelParams {
     pub latency_mean_millis: f64,
     pub latency_std_dev: f64,
     pub loss: f64,
 }
 
-impl MockSocketParams {
+impl MockChannelParams {
     pub const PERFECT: Self = Self {
         latency_mean_millis: 0.0,
         latency_std_dev: 0.0,
@@ -34,24 +34,24 @@ impl MockSocketParams {
 struct Message<T>(LocalTime, T);
 
 #[derive(Clone)]
-pub struct MockSocket<T> {
+pub struct MockChannel<T> {
     messages_in_transit: BinaryHeap<Message<T>>,
 }
 
-impl<T> Default for MockSocket<T> {
+impl<T> Default for MockChannel<T> {
     fn default() -> Self {
-        MockSocket {
+        MockChannel {
             messages_in_transit: BinaryHeap::new(),
         }
     }
 }
 
-impl<T> MockSocket<T> {
+impl<T> MockChannel<T> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn send(&mut self, params: &MockSocketParams, current_time: LocalTime, message: T) {
+    pub fn send(&mut self, params: &MockChannelParams, current_time: LocalTime, message: T) {
         let rng = &mut rand::thread_rng();
 
         if let Some(residual) = params.sample_residual(rng) {
