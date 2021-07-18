@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Untimely Demo</title>
+  </head>
+  <body>
+    <h1>Untimely Demo</h1>
+
+    <h2>Example 1: Local Gameplay</h2>
+    <p>The game runs locally only -- no multiplayer.</p>
+    <p>Controls: W/A/S/D for moving the green box around.</p>
+    <canvas id="figure1" width="320" height="240"></canvas>
+
+    <h2>Example 2: Client-Server</h2>
+    <p>The server periodically sends out the game state to all clients.
+      Clients act as "stupid terminals": they display received state 
+      as soon as they get it. In return, clients send their game input to the server.</p>
+    <canvas id="figure2" width="960" height="388"></canvas>
+
+    <script src="./untimely_demo.js" type="module"></script>
+    <script type="module">
+      import init from "./untimely_demo.js";
+
+      init();
+    </script>
+  </body>
+</html>
