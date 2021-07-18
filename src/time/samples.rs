@@ -23,8 +23,16 @@ where
         Self::default()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &(Time<Tag>, Value)> {
-        self.samples.iter()
+    pub fn iter(&self) -> impl Iterator<Item = (Time<Tag>, &Value)> {
+        self.samples.iter().map(|(time, value)| (*time, value))
+    }
+
+    pub fn times(&self) -> impl Iterator<Item = Time<Tag>> + '_ {
+        self.samples.iter().map(|(time, _)| *time)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &Value> {
+        self.samples.iter().map(|(_, value)| value)
     }
 
     pub fn front(&self) -> Option<&(Time<Tag>, Value)> {
