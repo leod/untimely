@@ -14,25 +14,47 @@ pub struct MockSocket<S, C> {
 
 #[derive(Clone)]
 pub struct MockNet<S, C> {
-    pub time: LocalTime,
-    pub sockets: BTreeMap<PlayerId, MockSocket<S, C>>,
+    time: LocalTime,
+    sockets: BTreeMap<PlayerId, MockSocket<S, C>>,
 }
 
 impl<S, C> MockNet<S, C> {
+    pub fn new(players: &[PlayerId]) -> Self {
+        let sockets = players.iter().map(|player| (*player, MockSocket {
+            server_out_params: MockChannelParams::PERFECT,
+            client_out_params: MockChannelParams::PERFECT,
+            server_out: MockChannel::new(),
+            client_out: MockChannel::new(),
+        }))
+        .collect();
+
+        MockNet {
+            time: LocalTime::zero(),
+            sockets,
+        } 
+    }
+
+    pub fn socket_mut(&mut self, player: PlayerId) -> &mut MockSocket<S, C> {
+        self.sockets.get_mut(&player).expect("Unknown PlayerId")
+    }
+
     pub fn send_to_server(&mut self, sender: PlayerId, message: C) {
-        let socket = self.sockets.get_mut(&sender).expect("Unknown PlayerId for sender");
-        socket.client_out.send(&socket.client_out_params, self.time, message);
+        let time = self.time;
+        let socket = self.socket_mut(sender);
+        socket.client_out.send(&socket.client_out_params, time, message);
     }
 
     pub fn send_to_client(&mut self, receiver: PlayerId, message: S) {
-        let socket = self.sockets.get_mut(&receiver).expect("Unknown PlayerId to receiver");
-        socket.server_out.send(&socket.server_out_params, self.time, message);
+        let time = self.time;
+        let socket = self.socket_mut(receiver);
+        socket.server_out.send(&socket.server_out_params, time, message);
     }
 
     pub fn receive_client(&mut self, receiver: PlayerId) -> Vec<(LocalTime, S)> {
-        let socket = self.sockets.get_mut(&receiver).expect("Unknown PlayerId to receiver");
+        let time = self.time;
+        let socket = self.socket_mut(receiver);
         let mut messages = Vec::new();
-        while let Some(message) = socket.server_out.receive(self.time) {
+        while let Some(message) = socket.server_out.receive(time) {
             messages.push(message);
         }
 

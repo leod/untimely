@@ -42,9 +42,8 @@ impl Figure for Figure1 {
     fn draw(&mut self) -> Result<(), malen::Error> {
         self.canvas.clear(Color4::new(0.8, 0.8, 0.8, 1.0));
 
-        let transform = self.canvas.screen_geom().orthographic_projection()
-            * Camera::screen_view_matrix(&self.canvas.screen_geom());
-        self.draw_game.draw(&self.canvas, &transform, &self.game)?;
+        self.draw_game
+            .draw_multiple(&self.canvas, 0, &[("Anna", &self.game)])?;
 
         Ok(())
     }

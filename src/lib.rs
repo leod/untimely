@@ -1,9 +1,9 @@
 mod time;
-mod mock;
 mod tick;
 mod types;
 
 pub mod metrics;
+pub mod mock;
 
 pub use tick::TickNum;
 pub use time::{GameDt, GameTime, LocalDt, LocalTime, PlaybackClock, PlaybackParams, Samples, PeriodicTimer};
