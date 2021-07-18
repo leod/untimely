@@ -4,7 +4,7 @@ use nalgebra::{Point2, Vector2};
 
 use malen::AaRect;
 
-use untimely::{EntityId, GameTime, GameDt, PlayerId, TickNum};
+use untimely::{EntityId, GameDt, GameTime, PlayerId, TickNum};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct GameInput {
@@ -21,7 +21,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub const MOVE_SPEED: f32 = 350.0;
+    pub const MOVE_SPEED: f32 = 200.0;
     pub const SIZE: f32 = 15.0;
 
     pub fn aa_rect(&self) -> AaRect {

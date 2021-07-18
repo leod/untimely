@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     marker::PhantomData,
     ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
+    time::Duration,
 };
 
 pub trait TimeTag: Copy {}
@@ -40,6 +41,10 @@ impl<Tag> Dt<Tag> {
         Self::from_secs(1.0 / hz)
     }
 
+    pub fn from_duration(duration: Duration) -> Self {
+        Self::from_secs(duration.as_secs_f64())
+    }
+
     pub fn zero() -> Self {
         Self::from_secs(0.0)
     }
@@ -60,6 +65,12 @@ impl<Tag> Dt<Tag> {
 impl LocalDt {
     pub fn to_game_dt(self) -> GameDt {
         GameDt::from_secs(self.to_secs())
+    }
+}
+
+impl GameDt {
+    pub fn to_local_dt(self) -> LocalDt {
+        LocalDt::from_secs(self.to_secs())
     }
 }
 
