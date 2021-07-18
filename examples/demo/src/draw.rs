@@ -1,5 +1,5 @@
 use malen::{
-    draw::{ColPass, ColVertex, Font, TextBatch, TriBatch},
+    draw::{ColPass, ColVertex, Font, LineBatch, TextBatch, TriBatch},
     AaRect, Camera, Canvas, Color4, ScreenGeom,
 };
 use nalgebra::{Matrix3, Point2, Point3, Vector2};
@@ -11,6 +11,7 @@ use crate::game::{Bullet, Game, Player, Wall};
 pub struct DrawGame {
     font: Font,
     tri_col_batch: TriBatch<ColVertex>,
+    line_col_batch: LineBatch<ColVertex>,
     text_batch: TextBatch,
     col_pass: ColPass,
 }
@@ -24,6 +25,7 @@ impl DrawGame {
                 30.0,
             )?,
             tri_col_batch: TriBatch::new(canvas)?,
+            line_col_batch: LineBatch::new(canvas)?,
             text_batch: TextBatch::new(canvas)?,
             col_pass: ColPass::new(canvas)?,
         })
@@ -40,12 +42,15 @@ impl DrawGame {
         game: &Game,
     ) -> Result<(), malen::Error> {
         self.tri_col_batch.clear();
+        self.line_col_batch.clear();
         self.text_batch.clear();
 
         self.render(game);
 
         self.col_pass
             .draw(transform, &self.tri_col_batch.draw_unit())?;
+        self.col_pass
+            .draw(transform, &self.line_col_batch.draw_unit())?;
 
         Ok(())
     }
@@ -107,10 +112,17 @@ impl DrawGame {
 
         self.tri_col_batch
             .push_quad(&player.aa_rect().into(), 0.0, color);
+        self.line_col_batch.push_quad_outline(
+            &player.aa_rect().into(),
+            0.0,
+            Color4::new(0.0, 0.0, 0.0, 1.0),
+        );
     }
 
     fn render_wall(&mut self, wall: &Wall) {
         self.tri_col_batch
             .push_quad(&wall.0.into(), 0.0, Color4::from_u8(100, 100, 100, 255));
+        self.line_col_batch
+            .push_quad_outline(&wall.0.into(), 0.0, Color4::new(0.0, 0.0, 0.0, 1.0));
     }
 }

@@ -92,8 +92,8 @@ impl Default for Game {
 }
 
 impl Game {
-    pub const MAP_WIDTH: f32 = 320.0;
-    pub const MAP_HEIGHT: f32 = 240.0;
+    pub const MAP_WIDTH: f32 = 420.0;
+    pub const MAP_HEIGHT: f32 = 315.0;
 
     pub fn run_input(&mut self, player_id: PlayerId, input: &GameInput) {
         let dt = self.params.dt.to_secs() as f32;
@@ -162,28 +162,32 @@ impl Game {
     }
 
     fn walls() -> Vec<Wall> {
-        let border_size = 15.0;
+        // Border size
+        let b = 15.0;
+
+        let w = Self::MAP_WIDTH;
+        let h = Self::MAP_HEIGHT;
 
         vec![
             Wall(AaRect {
-                center: Point2::new(0.0, 0.0),
-                size: Vector2::new(border_size, 2.0 * Self::MAP_HEIGHT),
+                center: Point2::new(b / 2.0, h / 2.0),
+                size: Vector2::new(b, h - 2.0 * b),
             }),
             Wall(AaRect {
-                center: Point2::new(0.0, 0.0),
-                size: Vector2::new(2.0 * Self::MAP_WIDTH, border_size),
+                center: Point2::new(w - b / 2.0, h / 2.0),
+                size: Vector2::new(b, h - 2.0 * b),
             }),
             Wall(AaRect {
-                center: Point2::new(Self::MAP_WIDTH, Self::MAP_HEIGHT),
-                size: Vector2::new(border_size, 2.0 * Self::MAP_HEIGHT),
+                center: Point2::new(w / 2.0, b / 2.0),
+                size: Vector2::new(w, b),
             }),
             Wall(AaRect {
-                center: Point2::new(Self::MAP_WIDTH, Self::MAP_HEIGHT),
-                size: Vector2::new(2.0 * Self::MAP_WIDTH, border_size),
+                center: Point2::new(w / 2.0, h - b / 2.0),
+                size: Vector2::new(w, b),
             }),
             Wall(AaRect {
-                center: Point2::new(Self::MAP_WIDTH / 2.0, Self::MAP_HEIGHT / 2.0),
-                size: Vector2::new(border_size * 2.0, Self::MAP_HEIGHT * 0.618),
+                center: Point2::new(w / 2.0, h / 2.0),
+                size: Vector2::new(b * 2.0, h * 0.618),
             }),
         ]
     }
