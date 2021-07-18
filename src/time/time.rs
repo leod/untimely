@@ -36,6 +36,10 @@ impl<Tag> Dt<Tag> {
         Self::from_secs(millis / 1000.0)
     }
 
+    pub fn from_hz(hz: f64) -> Self {
+        Self::from_secs(1.0 / hz)
+    }
+
     pub fn zero() -> Self {
         Self::from_secs(0.0)
     }
