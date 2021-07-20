@@ -80,8 +80,6 @@ impl Figure for Figure2 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        self.canvas.clear(Color4::new(0.8, 0.8, 0.8, 1.0));
-
         self.draw_game.draw_multiple(
             &self.canvas,
             &[

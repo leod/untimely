@@ -60,9 +60,14 @@ impl DrawGame {
         canvas: &Canvas,
         games: &[(&str, &Game)],
     ) -> Result<(), malen::Error> {
-        for (i, (name, game)) in games.iter().enumerate() {
+        canvas.clear(Color4::new(1.0, 1.0, 1.0, 1.0));
+
+        let padding = 15.0;
+        let mut x_start = 0.0;
+
+        for (name, game) in games.iter() {
             let transform = canvas.screen().orthographic_projection()
-                * Matrix3::new_translation(&Vector2::new(i as f32 * Game::MAP_WIDTH, 0.0))
+                * Matrix3::new_translation(&Vector2::new(x_start, 0.0))
                 * Camera::screen_view_matrix(&canvas.screen());
 
             self.draw(canvas, &transform, game)?;
@@ -70,18 +75,27 @@ impl DrawGame {
             self.font.write(
                 20.0,
                 Point3::new(20.0, 20.0, 0.0),
-                Color4::new(0.8, 0.8, 0.8, 1.0),
+                Color4::new(1.0, 0.0, 0.0, 1.0),
                 name,
                 &mut self.text_batch,
             );
             self.font
                 .draw(canvas, &transform, &self.text_batch.draw_unit())?;
+
+            x_start += Game::MAP_WIDTH + padding;
         }
 
         Ok(())
     }
 
     fn render(&mut self, game: &Game) {
+        let map_rect = AaRect::from_top_left(
+            Point2::origin(),
+            Vector2::new(Game::MAP_WIDTH, Game::MAP_HEIGHT),
+        );
+        self.tri_col_batch
+            .push_quad(&map_rect.into(), -1.0, Color4::new(0.9, 0.9, 0.9, 1.0));
+
         for (player_id, player) in game.players.iter() {
             self.render_player(*player_id, player);
         }
@@ -89,6 +103,12 @@ impl DrawGame {
         for wall in game.walls.iter() {
             self.render_wall(wall);
         }
+
+        self.line_col_batch.push_quad_outline(
+            &map_rect.into(),
+            0.0,
+            Color4::new(0.0, 0.0, 0.0, 1.0),
+        );
     }
 
     fn render_player(&mut self, player_id: PlayerId, player: &Player) {
@@ -102,17 +122,20 @@ impl DrawGame {
 
         self.tri_col_batch
             .push_quad(&player.aa_rect().into(), 0.0, color);
-        self.line_col_batch.push_quad_outline(
-            &player.aa_rect().into(),
-            0.0,
-            Color4::new(0.0, 0.0, 0.0, 1.0),
-        );
+
+        if player_id.0 == 0 {
+            self.line_col_batch.push_quad_outline(
+                &player.aa_rect().into(),
+                0.0,
+                Color4::new(0.0, 0.0, 0.0, 1.0),
+            );
+        }
     }
 
     fn render_wall(&mut self, wall: &Wall) {
         self.tri_col_batch
             .push_quad(&wall.0.into(), 0.0, Color4::from_u8(100, 100, 100, 255));
-        self.line_col_batch
-            .push_quad_outline(&wall.0.into(), 0.0, Color4::new(0.0, 0.0, 0.0, 1.0));
+        /*self.line_col_batch
+        .push_quad_outline(&wall.0.into(), 0.0, Color4::new(0.0, 0.0, 0.0, 1.0));*/
     }
 }

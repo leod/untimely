@@ -41,8 +41,7 @@ impl Figure for Figure1 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        self.canvas.resize(Vector2::new(420, 315));
-        self.canvas.clear(Color4::new(0.8, 0.8, 0.8, 1.0));
+        self.canvas.clear(Color4::new(1.0, 1.0, 1.0, 1.0));
 
         self.draw_game
             .draw_multiple(&self.canvas, &[("Anna", &self.game)])?;
