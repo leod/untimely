@@ -41,6 +41,10 @@ impl<S, C> MockNet<S, C> {
         }
     }
 
+    pub fn set_time(&mut self, time: LocalTime) {
+        self.time = time;
+    }
+
     pub fn socket_mut(&mut self, player: PlayerId) -> &mut MockSocket<S, C> {
         self.sockets.get_mut(&player).expect("Unknown PlayerId")
     }

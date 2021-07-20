@@ -10,7 +10,7 @@ use untimely::{LocalDt, LocalTime};
 
 pub use draw::DrawGame;
 pub use figure::Figure;
-pub use game::{Game, GameInput};
+pub use game::{Game, GameInput, GameParams};
 pub use input::current_game_input;
 
 #[wasm_bindgen(start)]

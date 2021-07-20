@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
-use malen::{draw::plot::Plotting, Camera, Canvas, Color4};
+use malen::{draw::plot::Plotting, Camera, Canvas, Color4, InputState};
 use nalgebra::Point2;
 use untimely::{mock::MockNet, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId};
 
-use crate::{current_game_input, DrawGame, Figure, Game, GameInput};
+use crate::{current_game_input, DrawGame, Figure, Game, GameInput, GameParams};
 
 type ServerMsg = Game;
 type ClientMsg = GameInput;
@@ -17,6 +17,7 @@ struct Server {
 struct Client {
     id: PlayerId,
     latest_server_game: Game,
+    input_timer: PeriodicTimer,
 }
 
 pub struct Figure2 {
@@ -43,7 +44,19 @@ impl Server {
         Self { game, tick_timer }
     }
 
-    fn update(&mut self, dt: LocalDt, mock_net: &mut MockNet<ServerMsg, ClientMsg>) {}
+    fn update(&mut self, dt: LocalDt, mock_net: &mut MockNet<ServerMsg, ClientMsg>) {
+        self.tick_timer.advance(dt);
+
+        if self.tick_timer.trigger() {
+            for (_, sender, input) in mock_net.receive_server() {
+                self.game.run_input(sender, &input);
+            }
+
+            for client in self.game.players.keys() {
+                mock_net.send_to_client(*client, self.game.clone());
+            }
+        }
+    }
 }
 
 impl Client {
@@ -51,6 +64,31 @@ impl Client {
         Client {
             id: PlayerId(id),
             latest_server_game: Game::default(),
+            input_timer: PeriodicTimer::new(GameParams::default().dt.to_local_dt()),
+        }
+    }
+
+    fn update(
+        &mut self,
+        dt: LocalDt,
+        input_state: &InputState,
+        mock_net: &mut MockNet<ServerMsg, ClientMsg>,
+    ) {
+        let messages = mock_net.receive_client(self.id);
+
+        // Send input periodically.
+        if self.id == PlayerId(0) {
+            self.input_timer.advance(dt);
+
+            if self.input_timer.trigger() {
+                mock_net.send_to_server(self.id, current_game_input(input_state))
+            }
+        }
+
+        // Always immediately display the latest state we receive from the
+        // server.
+        if let Some(last_message) = messages.last() {
+            self.latest_server_game = last_message.1.clone();
         }
     }
 }
@@ -77,6 +115,13 @@ impl Figure2 {
 impl Figure for Figure2 {
     fn update(&mut self, time: LocalTime, dt: LocalDt) {
         while let Some(_) = self.canvas.pop_event() {}
+
+        self.mock_net.set_time(time);
+        self.server.update(dt, &mut self.mock_net);
+
+        for client in &mut self.clients {
+            client.update(dt, self.canvas.input_state(), &mut self.mock_net);
+        }
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
