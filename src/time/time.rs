@@ -109,13 +109,13 @@ impl<Tag> Time<Tag> {
 
 impl<Tag> Clone for Dt<Tag> {
     fn clone(&self) -> Self {
-        self.clone()
+        Dt(self.0, PhantomData)
     }
 }
 
 impl<Tag> Clone for Time<Tag> {
     fn clone(&self) -> Self {
-        self.clone()
+        Time(self.0.clone())
     }
 }
 
