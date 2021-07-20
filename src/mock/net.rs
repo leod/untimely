@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{PlayerId, LocalTime};
+use crate::{LocalTime, PlayerId};
 
 use super::{MockChannel, MockChannelParams};
 
@@ -20,18 +20,25 @@ pub struct MockNet<S, C> {
 
 impl<S, C> MockNet<S, C> {
     pub fn new(players: &[PlayerId]) -> Self {
-        let sockets = players.iter().map(|player| (*player, MockSocket {
-            server_out_params: MockChannelParams::PERFECT,
-            client_out_params: MockChannelParams::PERFECT,
-            server_out: MockChannel::new(),
-            client_out: MockChannel::new(),
-        }))
-        .collect();
+        let sockets = players
+            .iter()
+            .map(|player| {
+                (
+                    *player,
+                    MockSocket {
+                        server_out_params: MockChannelParams::PERFECT,
+                        client_out_params: MockChannelParams::PERFECT,
+                        server_out: MockChannel::new(),
+                        client_out: MockChannel::new(),
+                    },
+                )
+            })
+            .collect();
 
         MockNet {
             time: LocalTime::zero(),
             sockets,
-        } 
+        }
     }
 
     pub fn socket_mut(&mut self, player: PlayerId) -> &mut MockSocket<S, C> {
@@ -41,13 +48,17 @@ impl<S, C> MockNet<S, C> {
     pub fn send_to_server(&mut self, sender: PlayerId, message: C) {
         let time = self.time;
         let socket = self.socket_mut(sender);
-        socket.client_out.send(&socket.client_out_params, time, message);
+        socket
+            .client_out
+            .send(&socket.client_out_params, time, message);
     }
 
     pub fn send_to_client(&mut self, receiver: PlayerId, message: S) {
         let time = self.time;
         let socket = self.socket_mut(receiver);
-        socket.server_out.send(&socket.server_out_params, time, message);
+        socket
+            .server_out
+            .send(&socket.server_out_params, time, message);
     }
 
     pub fn receive_client(&mut self, receiver: PlayerId) -> Vec<(LocalTime, S)> {

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Samples, LocalTime, time::LocalTag, LocalDt};
+use crate::{time::LocalTag, LocalDt, LocalTime, Samples};
 
 #[derive(Debug, Clone, Default)]
 pub struct Gauge {
@@ -13,28 +13,43 @@ impl Gauge {
     }
 
     pub fn mean(&self) -> f64 {
-        self.samples.values().sum::<f64>() / self.samples .len() as f64
-    } 
+        self.samples.values().sum::<f64>() / self.samples.len() as f64
+    }
 
     pub fn std(&self) -> f64 {
         // FIXME: Numerical stability
         let mean = self.mean();
-        let var = self.samples.values().map(|x| (x - mean).powi(2)).sum::<f64>()
+        let var = self
+            .samples
+            .values()
+            .map(|x| (x - mean).powi(2))
+            .sum::<f64>()
             / self.samples.len() as f64;
 
         var.sqrt()
-    } 
+    }
 
     pub fn min(&self) -> f64 {
-        self.samples.values().copied().min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap_or(f64::NAN)
+        self.samples
+            .values()
+            .copied()
+            .min_by(|x, y| x.partial_cmp(y).unwrap())
+            .unwrap_or(f64::NAN)
     }
 
     pub fn max(&self) -> f64 {
-        self.samples.values().copied().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap_or(f64::NAN)
+        self.samples
+            .values()
+            .copied()
+            .max_by(|x, y| x.partial_cmp(y).unwrap())
+            .unwrap_or(f64::NAN)
     }
 
     pub fn plot_points(&self) -> Vec<(f64, f64)> {
-        self.samples.iter().map(|(time, value)| (time.to_secs(), *value)).collect()
+        self.samples
+            .iter()
+            .map(|(time, value)| (time.to_secs(), *value))
+            .collect()
     }
 }
 
@@ -58,16 +73,20 @@ impl Metrics {
         self.time += dt;
 
         for gauge in self.gauges.values_mut() {
-            gauge.samples.retain_recent_samples(self.time - self.max_sample_age);
+            gauge
+                .samples
+                .retain_recent_samples(self.time - self.max_sample_age);
         }
     }
 
-    pub fn gauges(&self) -> impl Iterator<Item=(&String, &Gauge)> {
+    pub fn gauges(&self) -> impl Iterator<Item = (&String, &Gauge)> {
         self.gauges.iter()
     }
 
     pub fn gauge_mut(&mut self, name: &str) -> &mut Gauge {
-        self.gauges.entry(name.to_string()).or_insert(Gauge::default())
+        self.gauges
+            .entry(name.to_string())
+            .or_insert(Gauge::default())
     }
 
     pub fn gauge(&mut self, name: &str) -> &Gauge {
