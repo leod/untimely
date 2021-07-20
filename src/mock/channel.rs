@@ -7,25 +7,30 @@ use crate::time::{LocalDt, LocalTime};
 
 #[derive(Debug, Clone)]
 pub struct MockChannelParams {
-    pub latency_mean_millis: f64,
-    pub latency_std_dev: f64,
+    pub latency_mean: LocalDt,
+    pub latency_std_dev: LocalDt,
     pub loss: f64,
 }
 
 impl MockChannelParams {
-    pub const PERFECT: Self = Self {
-        latency_mean_millis: 0.0,
-        latency_std_dev: 0.0,
-        loss: 0.0,
-    };
+    pub fn perfect() -> Self {
+        Self {
+            latency_mean: LocalDt::zero(),
+            latency_std_dev: LocalDt::zero(),
+            loss: 0.0,
+        }
+    }
 
     pub fn sample_residual<R: Rng>(&self, rng: &mut R) -> Option<LocalDt> {
         if rng.gen::<f64>() < self.loss {
             None
         } else {
-            let distribution = Normal::new(self.latency_mean_millis, self.latency_std_dev).unwrap();
+            let distribution = Normal::new(
+                self.latency_mean.to_secs(),
+                self.latency_std_dev.to_secs(),
+            ).unwrap();
             let residual = distribution.sample(rng);
-            Some(LocalDt::from_millis(residual))
+            Some(LocalDt::from_secs(residual))
         }
     }
 }

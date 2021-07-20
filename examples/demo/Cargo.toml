@@ -24,3 +24,11 @@ getrandom = { version = "0.2", features = ["js"] }
 
 malen = { git = "https://github.com/leod/malen.git" }
 untimely = { path = "../../" }
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+    "Window",
+    "Document",
+    "Element"
+]

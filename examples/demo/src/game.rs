@@ -50,7 +50,7 @@ pub struct GameParams {
 impl Default for GameParams {
     fn default() -> Self {
         Self {
-            dt: GameDt::from_hz(20.0),
+            dt: GameDt::from_hz(60.0),
         }
     }
 }

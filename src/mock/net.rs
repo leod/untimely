@@ -6,8 +6,8 @@ use super::{MockChannel, MockChannelParams};
 
 #[derive(Clone)]
 pub struct MockSocket<S, C> {
-    server_out_params: MockChannelParams,
-    client_out_params: MockChannelParams,
+    pub server_out_params: MockChannelParams,
+    pub client_out_params: MockChannelParams,
     server_out: MockChannel<S>,
     client_out: MockChannel<C>,
 }
@@ -26,8 +26,8 @@ impl<S, C> MockNet<S, C> {
                 (
                     *player,
                     MockSocket {
-                        server_out_params: MockChannelParams::PERFECT,
-                        client_out_params: MockChannelParams::PERFECT,
+                        server_out_params: MockChannelParams::perfect(),
+                        client_out_params: MockChannelParams::perfect(),
                         server_out: MockChannel::new(),
                         client_out: MockChannel::new(),
                     },

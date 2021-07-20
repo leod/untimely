@@ -11,3 +11,11 @@ pub fn current_game_input(input_state: &InputState) -> GameInput {
         shoot: input_state.key(Key::Space),
     }
 }
+
+pub fn get_param(element_id: &str) -> f64 {
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
+    let element = document.get_element_by_id(element_id).unwrap();
+    let value = element.get_attribute("value").unwrap();
+    value.parse().unwrap()
+}
