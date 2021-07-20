@@ -9,3 +9,8 @@ edition = "2018"
 pareen = { git = "https://github.com/leod/pareen.git" }
 rand = "0.8"
 rand_distr = "0.4"
+
+[workspace]
+members = [
+    "examples/demo",
+]

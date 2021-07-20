@@ -1,6 +1,6 @@
 use malen::{
     draw::{ColPass, ColVertex, Font, LineBatch, TextBatch, TriBatch},
-    AaRect, Camera, Canvas, Color4, ScreenGeom,
+    AaRect, Camera, Canvas, Color4, Screen,
 };
 use nalgebra::{Matrix3, Point2, Point3, Vector2};
 
@@ -22,7 +22,7 @@ impl DrawGame {
             font: Font::from_bytes(
                 canvas,
                 include_bytes!("../resources/Roboto-Regular.ttf").to_vec(),
-                30.0,
+                40.0,
             )?,
             tri_col_batch: TriBatch::new(canvas)?,
             line_col_batch: LineBatch::new(canvas)?,
@@ -58,28 +58,18 @@ impl DrawGame {
     pub fn draw_multiple(
         &mut self,
         canvas: &Canvas,
-        y_offset: u32,
         games: &[(&str, &Game)],
     ) -> Result<(), malen::Error> {
-        // TODO: Need to consider device_pixel_ratio here?
-        let screen_geom = ScreenGeom {
-            size: Vector2::new(Game::MAP_WIDTH as u32, Game::MAP_HEIGHT as u32),
-            device_pixel_ratio: canvas.screen_geom().device_pixel_ratio,
-        };
-
         for (i, (name, game)) in games.iter().enumerate() {
-            canvas.set_viewport(
-                Point2::new(i as u32 * Game::MAP_WIDTH as u32, y_offset),
-                screen_geom.size,
-            );
-            let transform =
-                screen_geom.orthographic_projection() * Camera::screen_view_matrix(&screen_geom);
+            let transform = canvas.screen().orthographic_projection()
+                * Matrix3::new_translation(&Vector2::new(i as f32 * Game::MAP_WIDTH, 0.0))
+                * Camera::screen_view_matrix(&canvas.screen());
 
             self.draw(canvas, &transform, game)?;
 
             self.font.write(
                 20.0,
-                Point3::new(15.0, 15.0, 0.0),
+                Point3::new(20.0, 20.0, 0.0),
                 Color4::new(0.8, 0.8, 0.8, 1.0),
                 name,
                 &mut self.text_batch,

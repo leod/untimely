@@ -84,7 +84,6 @@ impl Figure for Figure2 {
 
         self.draw_game.draw_multiple(
             &self.canvas,
-            PLOT_HEIGHT,
             &[
                 ("Anna", &self.clients[0].latest_server_game),
                 ("Brad", &self.clients[1].latest_server_game),

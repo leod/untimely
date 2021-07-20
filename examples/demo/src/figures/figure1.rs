@@ -1,4 +1,5 @@
 use malen::{Camera, Canvas, Color4};
+use nalgebra::{Point2, Vector2};
 use untimely::{LocalDt, PeriodicTimer, PlayerId};
 
 use crate::{current_game_input, DrawGame, Figure, Game};
@@ -40,10 +41,11 @@ impl Figure for Figure1 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
+        self.canvas.resize(Vector2::new(420, 315));
         self.canvas.clear(Color4::new(0.8, 0.8, 0.8, 1.0));
 
         self.draw_game
-            .draw_multiple(&self.canvas, 0, &[("Anna", &self.game)])?;
+            .draw_multiple(&self.canvas, &[("Anna", &self.game)])?;
 
         Ok(())
     }
