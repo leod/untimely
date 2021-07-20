@@ -6,7 +6,7 @@ mod input;
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use untimely::LocalDt;
+use untimely::{LocalDt, LocalTime};
 
 pub use draw::DrawGame;
 pub use figure::Figure;
@@ -21,14 +21,17 @@ pub fn main() {
     log::info!("Hi, starting the demo");
 
     let mut figures = figures::figures().unwrap();
+    let mut prev_time = None;
 
-    malen::main_loop(move |dt, _running| {
-        let dt = LocalDt::from_duration(dt);
-        let dt = dt.min(LocalDt::from_secs(1.0));
+    malen::main_loop(move |timestamp_secs, _running| {
+        let time = LocalTime::from_secs(timestamp_secs);
+        let dt = prev_time.map_or(LocalDt::zero(), |prev_time| time - prev_time);
+        let dt = dt.min(LocalDt::from_secs(1.0)).max(LocalDt::from_secs(0.0));
+        prev_time = Some(time);
 
         for figure in figures.iter_mut() {
             if figure.is_active() {
-                figure.update(dt);
+                figure.update(time, dt);
             }
         }
 

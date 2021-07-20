@@ -75,7 +75,7 @@ impl Figure2 {
 }
 
 impl Figure for Figure2 {
-    fn update(&mut self, dt: LocalDt) {
+    fn update(&mut self, time: LocalTime, dt: LocalDt) {
         while let Some(_) = self.canvas.pop_event() {}
     }
 

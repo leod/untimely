@@ -1,6 +1,6 @@
 use malen::{Camera, Canvas, Color4};
 use nalgebra::{Point2, Vector2};
-use untimely::{LocalDt, PeriodicTimer, PlayerId};
+use untimely::{LocalDt, LocalTime, PeriodicTimer, PlayerId};
 
 use crate::{current_game_input, DrawGame, Figure, Game};
 
@@ -30,7 +30,7 @@ impl Figure1 {
 }
 
 impl Figure for Figure1 {
-    fn update(&mut self, dt: LocalDt) {
+    fn update(&mut self, _: LocalTime, dt: LocalDt) {
         while let Some(_) = self.canvas.pop_event() {}
 
         self.tick_timer.advance(dt);
