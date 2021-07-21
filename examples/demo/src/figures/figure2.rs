@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use malen::{draw::plot::Plotting, Camera, Canvas, Color4, InputState};
 use nalgebra::Point2;
-use untimely::{mock::MockNet, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId};
+use untimely::{mock::MockNet, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum};
 
 use crate::{current_game_input, get_param, DrawGame, Figure, Game, GameInput, GameParams};
 
@@ -11,6 +11,7 @@ type ClientMsg = GameInput;
 
 struct Server {
     game: Game,
+    tick_num: TickNum,
     tick_timer: PeriodicTimer,
 }
 
@@ -41,7 +42,11 @@ impl Server {
         let game = Game::default();
         let tick_timer = PeriodicTimer::new(game.params.dt.to_local_dt());
 
-        Self { game, tick_timer }
+        Self {
+            game,
+            tick_timer,
+            tick_num: TickNum::zero(),
+        }
     }
 
     fn update(&mut self, dt: LocalDt, mock_net: &mut MockNet<ServerMsg, ClientMsg>) {
@@ -52,9 +57,12 @@ impl Server {
                 self.game.run_input(sender, &input);
             }
             self.game.time += self.game.params.dt;
+            self.tick_num = self.tick_num.succ();
 
-            for client in self.game.players.keys() {
-                mock_net.send_to_client(*client, self.game.clone());
+            if self.tick_num.to_u32() % 3 == 0 {
+                for client in self.game.players.keys() {
+                    mock_net.send_to_client(*client, self.game.clone());
+                }
             }
         }
     }
@@ -123,6 +131,12 @@ impl Figure for Figure2 {
                 LocalDt::from_millis(get_param("figure2_anna_ping"));
             anna.client_out_params.latency_mean =
                 LocalDt::from_millis(get_param("figure2_anna_ping"));
+
+            log::info!(
+                "anna: {:?} {:?}",
+                anna.server_out_params,
+                anna.client_out_params
+            );
         }
 
         self.server.update(dt, &mut self.mock_net);

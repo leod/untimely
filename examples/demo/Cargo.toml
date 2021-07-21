@@ -32,5 +32,6 @@ version = "0.3"
 features = [
     "Window",
     "Document",
-    "Element"
+    "Element",
+    "HtmlInputElement"
 ]

@@ -1,3 +1,6 @@
+use wasm_bindgen::JsCast;
+use web_sys::HtmlInputElement;
+
 use malen::{InputState, Key};
 
 use untimely::{GameTime, PlayerId};
@@ -40,6 +43,6 @@ pub fn get_param(element_id: &str) -> f64 {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let element = document.get_element_by_id(element_id).unwrap();
-    let value = element.get_attribute("value").unwrap();
-    value.parse().unwrap()
+    let input = element.dyn_into::<HtmlInputElement>().unwrap();
+    input.value_as_number()
 }

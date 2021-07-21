@@ -25,10 +25,8 @@ impl MockChannelParams {
         if rng.gen::<f64>() < self.loss {
             None
         } else {
-            let distribution = Normal::new(
-                self.latency_mean.to_secs(),
-                self.latency_std_dev.to_secs(),
-            ).unwrap();
+            let distribution =
+                Normal::new(self.latency_mean.to_secs(), self.latency_std_dev.to_secs()).unwrap();
             let residual = distribution.sample(rng);
             Some(LocalDt::from_secs(residual))
         }

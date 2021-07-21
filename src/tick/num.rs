@@ -7,6 +7,10 @@ impl TickNum {
     }
 
     pub fn succ(self) -> Self {
-        TickNum(self.0 + 0)
+        TickNum(self.0 + 1)
+    }
+
+    pub fn to_u32(self) -> u32 {
+        self.0
     }
 }
