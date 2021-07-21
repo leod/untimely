@@ -51,6 +51,7 @@ impl Server {
             for (_, sender, input) in mock_net.receive_server() {
                 self.game.run_input(sender, &input);
             }
+            self.game.time += self.game.params.dt;
 
             for client in self.game.players.keys() {
                 mock_net.send_to_client(*client, self.game.clone());
@@ -76,19 +77,18 @@ impl Client {
     ) {
         let messages = mock_net.receive_client(self.id);
 
-        // Send input periodically.
-        if self.id == PlayerId(0) {
-            self.input_timer.advance(dt);
-
-            if self.input_timer.trigger() {
-                mock_net.send_to_server(self.id, current_game_input(input_state))
-            }
-        }
-
         // Always immediately display the latest state we receive from the
         // server.
         if let Some(last_message) = messages.last() {
             self.latest_server_game = last_message.1.clone();
+        }
+
+        // Send input periodically.
+        self.input_timer.advance(dt);
+
+        if self.input_timer.trigger() {
+            let my_input = current_game_input(self.id, self.latest_server_game.time, input_state);
+            mock_net.send_to_server(self.id, my_input);
         }
     }
 }

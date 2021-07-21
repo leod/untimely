@@ -30,13 +30,15 @@ impl Figure1 {
 }
 
 impl Figure for Figure1 {
-    fn update(&mut self, _: LocalTime, dt: LocalDt) {
+    fn update(&mut self, time: LocalTime, dt: LocalDt) {
         while let Some(_) = self.canvas.pop_event() {}
 
         self.tick_timer.advance(dt);
         if self.tick_timer.trigger() {
-            let input = current_game_input(&self.canvas.input_state());
+            let input = current_game_input(PlayerId(0), self.game.time, &self.canvas.input_state());
+
             self.game.run_input(PlayerId(0), &input);
+            self.game.time += self.game.params.dt;
         }
     }
 

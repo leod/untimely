@@ -1,14 +1,38 @@
 use malen::{InputState, Key};
 
+use untimely::{GameTime, PlayerId};
+
 use crate::GameInput;
 
-pub fn current_game_input(input_state: &InputState) -> GameInput {
-    GameInput {
-        left: input_state.key(Key::A),
-        right: input_state.key(Key::D),
-        up: input_state.key(Key::W),
-        down: input_state.key(Key::S),
-        shoot: input_state.key(Key::Space),
+pub fn current_game_input(id: PlayerId, time: GameTime, input_state: &InputState) -> GameInput {
+    if id == PlayerId(0) {
+        GameInput {
+            left: input_state.key(Key::A),
+            right: input_state.key(Key::D),
+            up: input_state.key(Key::W),
+            down: input_state.key(Key::S),
+            shoot: input_state.key(Key::Space),
+        }
+    } else {
+        let up = GameInput {
+            up: true,
+            ..GameInput::default()
+        };
+        let down = GameInput {
+            down: true,
+            ..GameInput::default()
+        };
+        let none = GameInput::default();
+
+        let head = pareen::constant(down.clone()).dur(0.35);
+        let tail = pareen::seq_with_dur!(
+            pareen::constant(none.clone()).dur(0.5),
+            pareen::constant(up).dur(0.7),
+            pareen::constant(none).dur(0.5),
+            pareen::constant(down).dur(0.7),
+        );
+
+        head.seq(tail.repeat()).eval(time.to_secs())
     }
 }
 
