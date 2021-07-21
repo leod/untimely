@@ -23,8 +23,8 @@ rand_distr = "0.4"
 getrandom = { version = "0.2", features = ["js"] }
 
 malen = { git = "https://github.com/leod/malen.git" }
+#malen = { path = "../../../malen" }
 pareen = { git = "https://github.com/leod/pareen.git" }
-
 untimely = { path = "../../" }
 
 [dependencies.web-sys]

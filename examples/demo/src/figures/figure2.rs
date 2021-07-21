@@ -109,7 +109,7 @@ impl Figure2 {
             server: Server::new(),
             clients: vec![Client::new(0), Client::new(1)],
             mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)]),
-            metrics: Metrics::new(LocalDt::from_secs(3.0)),
+            metrics: Metrics::new(LocalDt::from_secs(5.0)),
             canvas,
             draw_game,
             plotting,
@@ -138,16 +138,13 @@ impl Figure for Figure2 {
         }
 
         // Record metrics for visualization.
-        self.metrics.record_gauge(
-            "game_time_anna",
-            self.clients[0].latest_server_game.time.to_secs(),
-        );
-        self.metrics.record_gauge(
-            "game_time_brad",
-            self.clients[1].latest_server_game.time.to_secs(),
-        );
+        let time_anna = self.clients[0].latest_server_game.time.to_secs();
+        let time_brad = self.clients[0].latest_server_game.time.to_secs();
+        let time_server = self.server.game.time.to_secs();
         self.metrics
-            .record_gauge("game_time_server", self.server.game.time.to_secs());
+            .record_gauge("game_delay_anna", time_server - time_anna);
+        self.metrics
+            .record_gauge("game_delay_brad", time_server - time_brad);
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
@@ -173,25 +170,25 @@ impl Figure2 {
     fn plot(&self) -> Plot {
         let mut lines = Vec::new();
 
-        if let Some(gauge) = self.metrics.get_gauge("game_time_anna") {
+        let shift = |points: &[(f64, f64)]| {
+            points
+                .iter()
+                .map(|(x, y)| (*x - self.metrics.time().to_secs(), *y))
+                .collect::<Vec<_>>()
+        };
+
+        if let Some(gauge) = self.metrics.get_gauge("game_delay_anna") {
             lines.push(Line {
-                caption: "anna".to_string(),
+                caption: "delay_anna".to_string(),
                 color: Color4::new(0.2, 0.8, 0.2, 1.0),
-                points: gauge.plot_points(),
+                points: shift(&gauge.plot_points()),
             });
         }
-        if let Some(gauge) = self.metrics.get_gauge("game_time_brad") {
+        if let Some(gauge) = self.metrics.get_gauge("game_delay_brad") {
             lines.push(Line {
-                caption: "brad".to_string(),
+                caption: "delay_brad".to_string(),
                 color: Color4::new(0.2, 0.2, 0.8, 1.0),
-                points: gauge.plot_points(),
-            });
-        }
-        if let Some(gauge) = self.metrics.get_gauge("game_time_server") {
-            lines.push(Line {
-                caption: "server".to_string(),
-                color: Color4::new(0.8, 0.2, 0.2, 1.0),
-                points: gauge.plot_points(),
+                points: shift(&gauge.plot_points()),
             });
         }
 
@@ -199,15 +196,15 @@ impl Figure2 {
             size: Vector2::new(990.0, 200.0),
             x_axis: Axis {
                 label: "local time [s]".to_string(),
-                range: None,
+                range: Some((-5.0, 0.0)),
                 tics: 1.0,
-                tic_precision: 0,
+                tic_precision: 1,
             },
             y_axis: Axis {
                 label: "game time [s]".to_string(),
-                range: None,
-                tics: 1.0,
-                tic_precision: 0,
+                range: Some((0.0, 0.5)),
+                tics: 0.1,
+                tic_precision: 1,
             },
             axis_color: Color4::new(0.0, 0.0, 0.0, 1.0),
             background_color: None,

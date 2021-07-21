@@ -69,6 +69,10 @@ impl Metrics {
         }
     }
 
+    pub fn time(&self) -> LocalTime {
+        self.time
+    }
+
     pub fn advance(&mut self, dt: LocalDt) {
         self.time += dt;
 
