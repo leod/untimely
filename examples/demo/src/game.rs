@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use nalgebra::{Point2, Vector2};
 
-use malen::AaRect;
+use malen::AxisRect;
 
 use untimely::{EntityId, GameDt, GameTime, PlayerId, TickNum};
 
@@ -24,8 +24,8 @@ impl Player {
     pub const MOVE_SPEED: f32 = 200.0;
     pub const SIZE: f32 = 15.0;
 
-    pub fn aa_rect(&self) -> AaRect {
-        AaRect {
+    pub fn axis_rect(&self) -> AxisRect {
+        AxisRect {
             center: self.pos,
             size: Vector2::new(Self::SIZE, Self::SIZE),
         }
@@ -40,7 +40,7 @@ pub struct Bullet {
 }
 
 #[derive(Debug, Clone)]
-pub struct Wall(pub AaRect);
+pub struct Wall(pub AxisRect);
 
 #[derive(Debug, Clone)]
 pub struct GameParams {
@@ -103,7 +103,7 @@ impl Game {
             player.pos += move_dir * Player::MOVE_SPEED * dt;
 
             for wall in self.walls.iter() {
-                if let Some(response_vector) = Self::check_overlap(player.aa_rect(), wall.0) {
+                if let Some(response_vector) = Self::check_overlap(player.axis_rect(), wall.0) {
                     player.pos += response_vector;
                 }
             }
@@ -112,7 +112,7 @@ impl Game {
         }
     }
 
-    fn check_overlap(a: AaRect, b: AaRect) -> Option<Vector2<f32>> {
+    fn check_overlap(a: AxisRect, b: AxisRect) -> Option<Vector2<f32>> {
         // Top left
         let a_min = a.center - a.size / 2.0;
         let b_min = b.center - b.size / 2.0;
@@ -169,23 +169,23 @@ impl Game {
         let h = Self::MAP_HEIGHT;
 
         vec![
-            Wall(AaRect {
+            Wall(AxisRect {
                 center: Point2::new(b / 2.0, h / 2.0),
                 size: Vector2::new(b, h - 2.0 * b),
             }),
-            Wall(AaRect {
+            Wall(AxisRect {
                 center: Point2::new(w - b / 2.0, h / 2.0),
                 size: Vector2::new(b, h - 2.0 * b),
             }),
-            Wall(AaRect {
+            Wall(AxisRect {
                 center: Point2::new(w / 2.0, b / 2.0),
                 size: Vector2::new(w, b),
             }),
-            Wall(AaRect {
+            Wall(AxisRect {
                 center: Point2::new(w / 2.0, h - b / 2.0),
                 size: Vector2::new(w, b),
             }),
-            Wall(AaRect {
+            Wall(AxisRect {
                 center: Point2::new(w / 2.0, h / 2.0),
                 size: Vector2::new(b * 2.0, h * 0.618),
             }),

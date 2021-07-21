@@ -45,8 +45,7 @@ impl Figure for Figure1 {
     fn draw(&mut self) -> Result<(), malen::Error> {
         self.canvas.clear(Color4::new(1.0, 1.0, 1.0, 1.0));
 
-        self.draw_game
-            .draw_multiple(&self.canvas, &[("Anna", &self.game)])?;
+        self.draw_game.draw(&self.canvas, &[("Anna", &self.game)])?;
 
         Ok(())
     }

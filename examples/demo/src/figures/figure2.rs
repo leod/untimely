@@ -139,7 +139,7 @@ impl Figure for Figure2 {
 
         // Record metrics for visualization.
         let time_anna = self.clients[0].latest_server_game.time.to_secs();
-        let time_brad = self.clients[0].latest_server_game.time.to_secs();
+        let time_brad = self.clients[1].latest_server_game.time.to_secs();
         let time_server = self.server.game.time.to_secs();
         self.metrics
             .record_gauge("game_delay_anna", time_server - time_anna);
@@ -148,7 +148,7 @@ impl Figure for Figure2 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        self.draw_game.draw_multiple(
+        self.draw_game.draw(
             &self.canvas,
             &[
                 ("Anna", &self.clients[0].latest_server_game),
