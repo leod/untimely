@@ -30,9 +30,7 @@ pub fn main() {
         prev_time = Some(time);
 
         for figure in figures.iter_mut() {
-            if figure.is_active() {
-                figure.update(time, dt);
-            }
+            figure.update(time, dt);
         }
 
         for figure in figures.iter_mut() {

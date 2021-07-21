@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 
-use malen::{draw::plot::Plotting, Camera, Canvas, Color4, InputState};
-use nalgebra::Point2;
+use malen::{
+    draw::plot::{Axis, Line, Plot, Plotting},
+    Camera, Canvas, Color4, InputState,
+};
+use nalgebra::{Matrix3, Point2, Vector2};
 use untimely::{mock::MockNet, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum};
 
 use crate::{current_game_input, get_param, DrawGame, Figure, Game, GameInput, GameParams};
@@ -22,20 +25,15 @@ struct Client {
 }
 
 pub struct Figure2 {
-    time: LocalTime,
     server: Server,
     clients: Vec<Client>,
     mock_net: MockNet<ServerMsg, ClientMsg>,
 
     metrics: Metrics,
-
     canvas: Canvas,
     draw_game: DrawGame,
     plotting: Plotting,
 }
-
-const PLOT_SECS: f64 = 5.0;
-const PLOT_HEIGHT: u32 = 145;
 
 impl Server {
     fn new() -> Self {
@@ -108,11 +106,10 @@ impl Figure2 {
         let plotting = Plotting::new(&canvas)?;
 
         Ok(Self {
-            time: LocalTime::zero(),
             server: Server::new(),
             clients: vec![Client::new(0), Client::new(1)],
             mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)]),
-            metrics: Metrics::new(LocalDt::from_secs(10.0)),
+            metrics: Metrics::new(LocalDt::from_secs(3.0)),
             canvas,
             draw_game,
             plotting,
@@ -124,6 +121,7 @@ impl Figure for Figure2 {
     fn update(&mut self, time: LocalTime, dt: LocalDt) {
         while let Some(_) = self.canvas.pop_event() {}
 
+        self.metrics.advance(dt);
         self.mock_net.set_time(time);
         {
             let anna = self.mock_net.socket_mut(PlayerId(0));
@@ -131,12 +129,6 @@ impl Figure for Figure2 {
                 LocalDt::from_millis(get_param("figure2_anna_ping"));
             anna.client_out_params.latency_mean =
                 LocalDt::from_millis(get_param("figure2_anna_ping"));
-
-            log::info!(
-                "anna: {:?} {:?}",
-                anna.server_out_params,
-                anna.client_out_params
-            );
         }
 
         self.server.update(dt, &mut self.mock_net);
@@ -144,6 +136,18 @@ impl Figure for Figure2 {
         for client in &mut self.clients {
             client.update(dt, self.canvas.input_state(), &mut self.mock_net);
         }
+
+        // Record metrics for visualization.
+        self.metrics.record_gauge(
+            "game_time_anna",
+            self.clients[0].latest_server_game.time.to_secs(),
+        );
+        self.metrics.record_gauge(
+            "game_time_brad",
+            self.clients[1].latest_server_game.time.to_secs(),
+        );
+        self.metrics
+            .record_gauge("game_time_server", self.server.game.time.to_secs());
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
@@ -155,11 +159,69 @@ impl Figure for Figure2 {
                 ("Server", &self.server.game),
             ],
         )?;
+        self.draw_plot()?;
 
         Ok(())
     }
 
     fn is_active(&self) -> bool {
         self.canvas.has_focus()
+    }
+}
+
+impl Figure2 {
+    fn plot(&self) -> Plot {
+        let mut lines = Vec::new();
+
+        if let Some(gauge) = self.metrics.get_gauge("game_time_anna") {
+            lines.push(Line {
+                caption: "anna".to_string(),
+                color: Color4::new(0.2, 0.8, 0.2, 1.0),
+                points: gauge.plot_points(),
+            });
+        }
+        if let Some(gauge) = self.metrics.get_gauge("game_time_brad") {
+            lines.push(Line {
+                caption: "brad".to_string(),
+                color: Color4::new(0.2, 0.2, 0.8, 1.0),
+                points: gauge.plot_points(),
+            });
+        }
+        if let Some(gauge) = self.metrics.get_gauge("game_time_server") {
+            lines.push(Line {
+                caption: "server".to_string(),
+                color: Color4::new(0.8, 0.2, 0.2, 1.0),
+                points: gauge.plot_points(),
+            });
+        }
+
+        Plot {
+            size: Vector2::new(990.0, 200.0),
+            x_axis: Axis {
+                label: "local time [s]".to_string(),
+                range: None,
+                tics: 1.0,
+                tic_precision: 0,
+            },
+            y_axis: Axis {
+                label: "game time [s]".to_string(),
+                range: None,
+                tics: 1.0,
+                tic_precision: 0,
+            },
+            axis_color: Color4::new(0.0, 0.0, 0.0, 1.0),
+            background_color: None,
+            text_color: Color4::new(0.0, 0.0, 0.0, 1.0),
+            lines,
+        }
+    }
+
+    fn draw_plot(&mut self) -> Result<(), malen::Error> {
+        let transform = self.canvas.screen().orthographic_projection()
+            * Matrix3::new_translation(&Vector2::new(0.0, Game::MAP_HEIGHT + 15.0));
+
+        let plot = self.plot();
+        self.plotting
+            .draw(&self.canvas, self.draw_game.font_mut(), &transform, &plot)
     }
 }

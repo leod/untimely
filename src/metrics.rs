@@ -89,8 +89,8 @@ impl Metrics {
             .or_insert(Gauge::default())
     }
 
-    pub fn gauge(&mut self, name: &str) -> &Gauge {
-        self.gauge_mut(name)
+    pub fn get_gauge(&self, name: &str) -> Option<&Gauge> {
+        self.gauges.get(name)
     }
 
     pub fn record_gauge(&mut self, name: &str, value: f64) {
