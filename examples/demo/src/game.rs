@@ -92,8 +92,8 @@ impl Default for Game {
 }
 
 impl Game {
-    pub const MAP_WIDTH: f32 = 420.0;
-    pub const MAP_HEIGHT: f32 = 315.0;
+    pub const MAP_WIDTH: f32 = 320.0;
+    pub const MAP_HEIGHT: f32 = 240.0;
 
     pub fn run_input(&mut self, player_id: PlayerId, input: &GameInput) {
         let dt = self.params.dt.to_secs() as f32;

@@ -1,34 +1,54 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, shrink-to-fit=no">
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+          crossorigin="anonymous">
     <title>Untimely Demo</title>
   </head>
   <body>
+    <div class="container">
     <h1>Untimely Demo</h1>
 
-    <h2>Example 1: Local Gameplay</h2>
-    <p>The game runs locally only -- no multiplayer.</p>
-    <p>Controls: W/A/S/D for moving the green box around.</p>
-    <canvas id="figure1" width="420" height="315"></canvas>
+    <h2>Local Gameplay</h2>
+    <p>In our first example, the game runs completely locally. There is no multiplayer yet.</p>
+    <p><strong>Controls:</strong> You control the green box, Anna. Press W/A/S/D for movement.</p>
+    <figure class="figure">
+      <figcaption class="figure-caption">Figure 1: Local gameplay.</figcaption>
 
-    <h2>Example 2: Client-Server</h2>
-    <p>The server periodically sends out the game state to all clients.
-      Clients act as "stupid terminals": they display received state 
-      as soon as they get it. In return, clients send their game input to the server.</p>
-    <div>
-      <input type="range"
-             min="0"
-             value="50"
-             max="200"
-             class="slider"
-             id="figure2_anna_ping"
-             oninit="this.nextElementSibling.value = this.value"
-             oninput="this.nextElementSibling.value = this.value">
-      <output>50</output>
-    </div>
-    <canvas id="figure2" width="1290" height="460"></canvas>
+      <canvas id="figure1" width="320" height="240"></canvas>
+    </figure>
+
+    <h2>Client-Server</h2>
+    <p>
+      Clients periodically send their game input to the server.
+      In return, the server applies the received inputs and periodically sends out the game state to all clients.
+      Clients act as "dumb terminals": they display received state as soon as it arrives.
+    </p>
+
+    <figure class="figure">
+      <figcaption class="figure-caption">Figure 2: Authorative server and "dumb terminal" clients.</figcaption>
+
+      <div>
+        <input type="range" min="0"
+              value="50"
+              max="200"
+              class="slider"
+              id="figure2_anna_ping"
+              onchange="this.nextElementSibling.value = this.value">
+        <output id="figure2_anna_ping_output">50</output>
+      </div>
+      <script type="text/javascript">
+        document.getElementById("figure2_anna_ping_output").value
+            = document.getElementById("figure2_anna_ping").value;
+      </script>
+
+      <canvas id="figure2" width="990" height="240"></canvas>
+    </figure>
+  </div>
 
     <script src="./untimely_demo.js" type="module"></script>
     <script type="module">
@@ -36,5 +56,15 @@
 
       init();
     </script>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+            integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+            crossorigin="anonymous"></script>
   </body>
 </html>
