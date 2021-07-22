@@ -1,5 +1,4 @@
-use malen::{Camera, Canvas, Color4};
-use nalgebra::{Point2, Vector2};
+use malen::{Canvas, Color4};
 use untimely::{LocalDt, LocalTime, PeriodicTimer, PlayerId};
 
 use crate::{current_game_input, DrawGame, Figure, Game};

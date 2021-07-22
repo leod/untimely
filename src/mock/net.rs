@@ -4,10 +4,24 @@ use crate::{LocalTime, PlayerId};
 
 use super::{MockChannel, MockChannelParams};
 
+#[derive(Clone, Debug)]
+pub struct MockSocketParams {
+    pub server_out: MockChannelParams,
+    pub client_out: MockChannelParams,
+}
+
+impl MockSocketParams {
+    pub fn perfect() -> Self {
+        Self {
+            server_out: MockChannelParams::perfect(),
+            client_out: MockChannelParams::perfect(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct MockSocket<S, C> {
-    pub server_out_params: MockChannelParams,
-    pub client_out_params: MockChannelParams,
+    params: MockSocketParams,
     server_out: MockChannel<S>,
     client_out: MockChannel<C>,
 }
@@ -26,8 +40,7 @@ impl<S, C> MockNet<S, C> {
                 (
                     *player,
                     MockSocket {
-                        server_out_params: MockChannelParams::perfect(),
-                        client_out_params: MockChannelParams::perfect(),
+                        params: MockSocketParams::perfect(),
                         server_out: MockChannel::new(),
                         client_out: MockChannel::new(),
                     },
@@ -45,8 +58,12 @@ impl<S, C> MockNet<S, C> {
         self.time = time;
     }
 
-    pub fn socket_mut(&mut self, player: PlayerId) -> &mut MockSocket<S, C> {
+    fn socket_mut(&mut self, player: PlayerId) -> &mut MockSocket<S, C> {
         self.sockets.get_mut(&player).expect("Unknown PlayerId")
+    }
+
+    pub fn set_params(&mut self, player: PlayerId, params: MockSocketParams) {
+        self.socket_mut(player).params = params;
     }
 
     pub fn send_to_server(&mut self, sender: PlayerId, message: C) {
@@ -54,7 +71,7 @@ impl<S, C> MockNet<S, C> {
         let socket = self.socket_mut(sender);
         socket
             .client_out
-            .send(&socket.client_out_params, time, message);
+            .send(&socket.params.client_out, time, message);
     }
 
     pub fn send_to_client(&mut self, receiver: PlayerId, message: S) {
@@ -62,7 +79,7 @@ impl<S, C> MockNet<S, C> {
         let socket = self.socket_mut(receiver);
         socket
             .server_out
-            .send(&socket.server_out_params, time, message);
+            .send(&socket.params.server_out, time, message);
     }
 
     pub fn receive_client(&mut self, receiver: PlayerId) -> Vec<(LocalTime, S)> {

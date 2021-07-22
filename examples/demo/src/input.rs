@@ -3,7 +3,10 @@ use web_sys::HtmlInputElement;
 
 use malen::{InputState, Key};
 
-use untimely::{GameTime, PlayerId};
+use untimely::{
+    mock::{MockChannelParams, MockSocketParams},
+    GameTime, LocalDt, PlayerId,
+};
 
 use crate::GameInput;
 
@@ -45,4 +48,20 @@ pub fn get_param(element_id: &str) -> f64 {
     let element = document.get_element_by_id(element_id).unwrap();
     let input = element.dyn_into::<HtmlInputElement>().unwrap();
     input.value_as_number()
+}
+
+pub fn get_socket_params(prefix: &str, player: &str) -> MockSocketParams {
+    let ping = LocalDt::from_millis(get_param(&format!("{}_{}_ping", prefix, player)));
+
+    // TODO: Allow configuring the two mock channels separately.
+    let channel_params = MockChannelParams {
+        latency_mean: ping * 0.5,
+        latency_std_dev: LocalDt::zero(),
+        loss: 0.0,
+    };
+
+    MockSocketParams {
+        server_out: channel_params.clone(),
+        client_out: channel_params,
+    }
 }

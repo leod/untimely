@@ -1,13 +1,11 @@
-use std::collections::BTreeMap;
-
 use malen::{
     draw::plot::{Axis, Line, Plot, Plotting},
-    Camera, Canvas, Color4, InputState,
+    Canvas, Color4, InputState,
 };
-use nalgebra::{Matrix3, Point2, Vector2};
+use nalgebra::{Matrix3, Vector2};
 use untimely::{mock::MockNet, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum};
 
-use crate::{current_game_input, get_param, DrawGame, Figure, Game, GameInput, GameParams};
+use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameInput, GameParams};
 
 type ServerMsg = Game;
 type ClientMsg = GameInput;
@@ -121,23 +119,18 @@ impl Figure for Figure2 {
     fn update(&mut self, time: LocalTime, dt: LocalDt) {
         while let Some(_) = self.canvas.pop_event() {}
 
-        self.metrics.advance(dt);
         self.mock_net.set_time(time);
-        {
-            let anna = self.mock_net.socket_mut(PlayerId(0));
-            anna.server_out_params.latency_mean =
-                LocalDt::from_millis(get_param("figure2_anna_ping"));
-            anna.client_out_params.latency_mean =
-                LocalDt::from_millis(get_param("figure2_anna_ping"));
-        }
+        self.mock_net
+            .set_params(PlayerId(0), get_socket_params("figure2", "anna"));
+        //self.mock_net.set_params(PlayerId(1), get_socket_params("figure2", "brad"));
 
         self.server.update(dt, &mut self.mock_net);
-
         for client in &mut self.clients {
             client.update(dt, self.canvas.input_state(), &mut self.mock_net);
         }
 
         // Record metrics for visualization.
+        self.metrics.advance(dt);
         let time_anna = self.clients[0].latest_server_game.time.to_secs();
         let time_brad = self.clients[1].latest_server_game.time.to_secs();
         let time_server = self.server.game.time.to_secs();
