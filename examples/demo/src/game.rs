@@ -6,7 +6,7 @@ use malen::AxisRect;
 
 use untimely::{EntityId, GameDt, GameTime, PlayerId, TickNum};
 
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GameInput {
     pub left: bool,
     pub right: bool,

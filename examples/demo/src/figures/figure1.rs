@@ -1,7 +1,7 @@
 use malen::{Canvas, Color4};
 use untimely::{LocalDt, LocalTime, PeriodicTimer, PlayerId};
 
-use crate::{current_game_input, DrawGame, Figure, Game};
+use crate::{current_game_input, DrawGame, Figure, Game, GameInput};
 
 pub struct Figure1 {
     game: Game,
@@ -9,6 +9,7 @@ pub struct Figure1 {
 
     canvas: Canvas,
     draw_game: DrawGame,
+    last_input: GameInput,
 }
 
 impl Figure1 {
@@ -24,6 +25,7 @@ impl Figure1 {
             tick_timer,
             canvas,
             draw_game,
+            last_input: GameInput::default(),
         })
     }
 }
@@ -34,9 +36,10 @@ impl Figure for Figure1 {
 
         self.tick_timer.advance(dt);
         if self.tick_timer.trigger() {
-            let input = current_game_input(PlayerId(0), self.game.time, &self.canvas.input_state());
+            self.last_input =
+                current_game_input(PlayerId(0), self.game.time, &self.canvas.input_state());
 
-            self.game.run_input(PlayerId(0), &input);
+            self.game.run_input(PlayerId(0), &self.last_input);
             self.game.time += self.game.params.dt;
         }
     }
@@ -44,7 +47,10 @@ impl Figure for Figure1 {
     fn draw(&mut self) -> Result<(), malen::Error> {
         self.canvas.clear(Color4::new(1.0, 1.0, 1.0, 1.0));
 
-        self.draw_game.draw(&self.canvas, &[("Anna", &self.game)])?;
+        self.draw_game.draw(
+            &self.canvas,
+            &[("Anna", &self.game, Some(self.last_input), None)],
+        )?;
 
         Ok(())
     }

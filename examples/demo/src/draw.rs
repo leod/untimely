@@ -9,7 +9,7 @@ use nalgebra::{Matrix3, Point2, Point3, Vector2};
 
 use untimely::PlayerId;
 
-use crate::game::{Bullet, Game, Player, Wall};
+use crate::game::{Bullet, Game, GameInput, Player, Wall};
 
 pub struct DrawGame {
     font: Font,
@@ -51,7 +51,11 @@ impl DrawGame {
         &mut self.font
     }
 
-    pub fn draw(&mut self, canvas: &Canvas, games: &[(&str, &Game)]) -> Result<(), malen::Error> {
+    pub fn draw(
+        &mut self,
+        canvas: &Canvas,
+        games: &[(&str, &Game, Option<GameInput>, Option<GameInput>)],
+    ) -> Result<(), malen::Error> {
         self.occluder_batch.clear();
         self.shadowed_tri_col_batch.clear();
         self.plain_tri_col_batch.clear();
@@ -63,8 +67,9 @@ impl DrawGame {
             let padding = 15.0;
             let mut x_start = 0.0;
 
-            for (name, game) in games.iter() {
+            for (name, game, input1, input2) in games.iter() {
                 self.render_game(game, Vector2::new(x_start, 0.0));
+
                 self.font.write(
                     20.0,
                     Point3::new(x_start + 10.0, 7.5, 0.0),
@@ -72,6 +77,12 @@ impl DrawGame {
                     name,
                     &mut self.text_batch,
                 );
+                if let Some(input1) = input1.as_ref() {
+                    self.render_input(input1, Vector2::new(x_start + 10.0, 32.5));
+                }
+                if let Some(input2) = input2.as_ref() {
+                    self.render_input(input2, Vector2::new(x_start + 250.0, 32.5));
+                }
 
                 x_start += Game::MAP_WIDTH + padding;
             }
@@ -125,6 +136,35 @@ impl DrawGame {
             0.0,
             Color4::new(0.0, 0.0, 0.0, 1.0),
         );
+    }
+
+    fn render_input(&mut self, input: &GameInput, mut offset: Vector2<f32>) {
+        let letters = vec![
+            (input.up, "W"),
+            (input.left, "A"),
+            (input.down, "S"),
+            (input.right, "D"),
+        ];
+
+        for (is_active, letter) in letters {
+            let color = if is_active {
+                Color4::from_u8(255, 0, 0, 255)
+            } else {
+                Color4::from_u8(100, 0, 0, 255)
+            };
+
+            offset.x += self
+                .font
+                .write(
+                    15.0,
+                    Point3::new(offset.x, offset.y, 0.0),
+                    color,
+                    &letter,
+                    &mut self.text_batch,
+                )
+                .x;
+            offset.x += 5.0;
+        }
     }
 
     fn render_player(&mut self, player_id: PlayerId, player: &Player, offset: Vector2<f32>) {

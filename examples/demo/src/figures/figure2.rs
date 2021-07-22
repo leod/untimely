@@ -14,12 +14,18 @@ struct Server {
     game: Game,
     tick_num: TickNum,
     tick_timer: PeriodicTimer,
+
+    // Only for visualization:
+    last_inputs: Vec<GameInput>,
 }
 
 struct Client {
     id: PlayerId,
     latest_server_game: Game,
     input_timer: PeriodicTimer,
+
+    // Only for visualization:
+    last_input: GameInput,
 }
 
 pub struct Figure2 {
@@ -42,6 +48,7 @@ impl Server {
             game,
             tick_timer,
             tick_num: TickNum::zero(),
+            last_inputs: vec![GameInput::default(); 2],
         }
     }
 
@@ -51,6 +58,9 @@ impl Server {
         if self.tick_timer.trigger() {
             for (_, sender, input) in mock_net.receive_server() {
                 self.game.run_input(sender, &input);
+
+                // Only for visualization:
+                self.last_inputs[sender.0 as usize] = input;
             }
             self.game.time += self.game.params.dt;
             self.tick_num = self.tick_num.succ();
@@ -70,6 +80,7 @@ impl Client {
             id: PlayerId(id),
             latest_server_game: Game::default(),
             input_timer: PeriodicTimer::new(GameParams::default().dt.to_local_dt()),
+            last_input: GameInput::default(),
         }
     }
 
@@ -93,6 +104,9 @@ impl Client {
         if self.input_timer.trigger() {
             let my_input = current_game_input(self.id, self.latest_server_game.time, input_state);
             mock_net.send_to_server(self.id, my_input);
+
+            // Only for visualization:
+            self.last_input = my_input;
         }
     }
 }
@@ -141,12 +155,31 @@ impl Figure for Figure2 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
+        let anna = &self.clients[0];
+        let brad = &self.clients[1];
+        let serv = &self.server;
+
         self.draw_game.draw(
             &self.canvas,
             &[
-                ("Anna", &self.clients[0].latest_server_game),
-                ("Brad", &self.clients[1].latest_server_game),
-                ("Server", &self.server.game),
+                (
+                    "Anna",
+                    &anna.latest_server_game,
+                    Some(anna.last_input),
+                    None,
+                ),
+                (
+                    "Brad",
+                    &brad.latest_server_game,
+                    None,
+                    Some(brad.last_input),
+                ),
+                (
+                    "Server",
+                    &serv.game,
+                    Some(serv.last_inputs[0]),
+                    Some(serv.last_inputs[1]),
+                ),
             ],
         )?;
         self.draw_plot()?;
