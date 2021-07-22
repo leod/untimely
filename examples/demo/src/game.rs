@@ -108,6 +108,16 @@ impl Game {
                 }
             }
 
+            for (other_id, other_player) in self.players.iter() {
+                if *other_id != player_id {
+                    if let Some(response_vector) =
+                        Self::check_overlap(player.axis_rect(), other_player.axis_rect())
+                    {
+                        player.pos += response_vector;
+                    }
+                }
+            }
+
             self.players.insert(player_id, player);
         }
     }
@@ -163,7 +173,7 @@ impl Game {
 
     fn walls() -> Vec<Wall> {
         // Border size
-        let b = 15.0;
+        let b = 5.0;
 
         let w = Self::MAP_WIDTH;
         let h = Self::MAP_HEIGHT;
@@ -187,7 +197,11 @@ impl Game {
             }),
             Wall(AxisRect {
                 center: Point2::new(w / 2.0, h / 2.0),
-                size: Vector2::new(b * 2.0, h * 0.618),
+                size: Vector2::new(30.0, h * 0.618),
+            }),
+            Wall(AxisRect {
+                center: Point2::new(b * 2.0 + 215.0, h / 2.0),
+                size: Vector2::new(50.0, b),
             }),
         ]
     }

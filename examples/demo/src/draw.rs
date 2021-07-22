@@ -67,7 +67,7 @@ impl DrawGame {
                 self.render_game(game, Vector2::new(x_start, 0.0));
                 self.font.write(
                     20.0,
-                    Point3::new(x_start + 20.0, 20.0, 0.0),
+                    Point3::new(x_start + 10.0, 7.5, 0.0),
                     Color4::new(1.0, 0.0, 0.0, 1.0),
                     name,
                     &mut self.text_batch,
