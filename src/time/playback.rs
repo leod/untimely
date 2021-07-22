@@ -15,37 +15,31 @@ pub struct PlaybackClock {
 
     stream_samples: Samples<LocalTag, GameTime>,
 
-    local_time: LocalTime,
     playback_time: GameTime,
 }
 
 impl PlaybackClock {
-    pub fn new(params: PlaybackParams, local_time: LocalTime) -> Self {
+    pub fn new(params: PlaybackParams) -> Self {
         PlaybackClock {
             params,
             stream_samples: Samples::new(),
-            local_time,
             playback_time: GameTime::zero(),
         }
-    }
-
-    pub fn local_time(&self) -> LocalTime {
-        self.local_time
     }
 
     pub fn playback_time(&self) -> GameTime {
         self.playback_time
     }
 
-    pub fn record_stream_sample(&mut self, local_time: LocalTime, stream_time: GameTime) {
-        self.stream_samples.record_sample(local_time, stream_time);
+    pub fn record_stream_sample(&mut self, arrival_time: LocalTime, stream_time: GameTime) {
+        self.stream_samples.record_sample(arrival_time, stream_time);
         self.stream_samples
-            .retain_recent_samples(local_time - self.params.max_sample_age);
+            .retain_recent_samples(arrival_time - self.params.max_sample_age);
     }
 
-    pub fn advance(&mut self, dt: LocalDt) {
+    pub fn advance(&mut self, time: LocalTime, dt: LocalDt) {
         let stream_time =
-            predict_stream_time(&self.stream_samples, self.local_time).unwrap_or(GameTime::zero());
+            predict_stream_time(&self.stream_samples, time).unwrap_or(GameTime::zero());
         let target_time = stream_time - self.params.delay;
         let residual = target_time - self.playback_time;
         let max_stream_time = self
@@ -58,7 +52,5 @@ impl PlaybackClock {
 
         self.playback_time += dt.to_game_dt() * time_warp(residual);
         self.playback_time = self.playback_time.min(max_playback_time);
-
-        self.local_time += dt;
     }
 }
