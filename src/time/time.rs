@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     marker::PhantomData,
-    ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign},
     time::Duration,
 };
 
@@ -227,6 +227,22 @@ impl<Tag> Mul<f64> for Dt<Tag> {
 
     fn mul(self, rhs: f64) -> Self {
         Dt::from_secs(self.0 * rhs)
+    }
+}
+
+impl<Tag> Div<f64> for Dt<Tag> {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self {
+        Dt::from_secs(self.0 / rhs)
+    }
+}
+
+impl<Tag> Div<Dt<Tag>> for Dt<Tag> {
+    type Output = f64;
+
+    fn div(self, rhs: Dt<Tag>) -> f64 {
+        self.to_secs() / rhs.to_secs()
     }
 }
 

@@ -4,21 +4,23 @@ pub fn time_warp(residual: GameDt) -> f64 {
     0.5 + (2.0 - 0.5) / (1.0 + 2.0 * (-residual.to_secs() / 0.005).exp())
 }
 
-pub struct PlaybackParams {
+#[derive(Debug, Clone)]
+pub struct PlaybackClockParams {
     pub delay: GameDt,
     pub max_overtake: GameDt,
     pub max_sample_age: LocalDt,
 }
 
+#[derive(Debug, Clone)]
 pub struct PlaybackClock {
-    pub params: PlaybackParams,
+    pub params: PlaybackClockParams,
     clock: LocalClock,
     stream_samples: Samples<GameTime>,
     playback_time: GameTime,
 }
 
 impl PlaybackClock {
-    pub fn new(params: PlaybackParams, clock: LocalClock) -> Self {
+    pub fn new(params: PlaybackClockParams, clock: LocalClock) -> Self {
         let stream_samples = Samples::new(LocalDt::from_secs(1.0), clock.clone());
 
         Self {

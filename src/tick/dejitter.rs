@@ -1,5 +1,5 @@
 use super::TickTime;
-use crate::{time, LocalClock, LocalDt, LocalTime, Samples, TickNum};
+use crate::{time::predict_stream_time, LocalClock, LocalDt, LocalTime, Samples, TickNum};
 
 #[derive(Debug, Clone)]
 pub struct DejitterBuffer<T> {
@@ -21,6 +21,18 @@ impl<T> DejitterBuffer<T> {
         }
     }
 
+    pub fn delay(&self) -> LocalDt {
+        self.delay
+    }
+
+    pub fn set_delay(&mut self, delay: LocalDt) {
+        self.delay = delay;
+    }
+
+    pub fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
     pub fn insert(&mut self, receive_time: LocalTime, receive_num: TickNum, value: T) {
         let is_outdated = self
             .last_popped_num
@@ -29,7 +41,8 @@ impl<T> DejitterBuffer<T> {
             return;
         }
 
-        self.time_samples.record(receive_time, receive_num.to_tick_time());
+        self.time_samples
+            .record(receive_time, receive_num.to_tick_time());
 
         match self
             .buffer
@@ -46,8 +59,9 @@ impl<T> DejitterBuffer<T> {
     }
 
     pub fn pop(&mut self) -> Option<(TickNum, T)> {
-        let stream_num = time::predict_stream_time(&self.time_samples, self.clock.local_time())
-            .map(|stream_time| TickNum::from_tick_time(stream_time));
+        let delayed_time = self.clock.local_time() - self.delay;
+        let stream_num =
+            predict_stream_time(&self.time_samples, delayed_time).map(TickNum::from_tick_time);
 
         let oldest_item_is_ready = self.buffer.first().map_or(false, |(oldest_num, _)| {
             stream_num.map_or(false, |stream_num| stream_num >= *oldest_num)
@@ -65,9 +79,5 @@ impl<T> DejitterBuffer<T> {
         } else {
             None
         }
-    }
-
-    pub fn len(&self) -> usize {
-        self.buffer.len()
     }
 }
