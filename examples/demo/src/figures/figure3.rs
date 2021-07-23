@@ -59,7 +59,7 @@ impl Server {
     }
 
     fn update(&mut self, dt: LocalDt, mock_net: &mut MockNet<ServerMsg, ClientMsg>) {
-        for (receive_time, sender, (input_num, input)) in mock_net.receive_server() {
+        for (receive_time, sender, (input_num, input)) in mock_net.receive_from_clients() {
             self.clients[sender.to_usize()]
                 .inputs
                 .insert(receive_time, input_num, input);
@@ -116,7 +116,7 @@ impl User {
         input_state: &InputState,
         mock_net: &mut MockNet<ServerMsg, ClientMsg>,
     ) {
-        for (receive_time, tick) in mock_net.receive_client(self.id) {
+        for (receive_time, tick) in mock_net.receive_from_server(self.id) {
             self.playback.record_tick(receive_time, tick.1.time, tick);
         }
 
@@ -234,8 +234,8 @@ impl Figure for Figure3 {
                 (
                     "Brad",
                     brad.game().as_ref(),
-                    None,
                     Some(brad.last_input.clone()),
+                    None,
                 ),
                 (
                     "Server",

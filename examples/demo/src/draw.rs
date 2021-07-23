@@ -79,7 +79,8 @@ impl DrawGame {
                 self.font.write(
                     20.0,
                     Point3::new(x_start + 10.0, 7.5, 0.0),
-                    Color4::new(1.0, 0.0, 0.0, 1.0),
+                    //Color4::new(1.0, 0.0, 0.0, 1.0),
+                    Color4::new(1.0, 1.0, 1.0, 1.0),
                     name,
                     &mut self.text_batch,
                 );
@@ -87,7 +88,7 @@ impl DrawGame {
                     self.render_input(input1, Vector2::new(x_start + 10.0, 32.5));
                 }
                 if let Some(input2) = input2.as_ref() {
-                    self.render_input(input2, Vector2::new(x_start + 250.0, 32.5));
+                    self.render_input(input2, Vector2::new(x_start + 10.0, 51.25));
                 }
 
                 x_start += Game::MAP_WIDTH + padding;
@@ -104,7 +105,7 @@ impl DrawGame {
             .finish()?;
         self.shadow_col_pass.draw(
             &transform,
-            Color3::new(0.4, 0.4, 0.4),
+            Color3::new(0.2, 0.2, 0.2),
             &self.shadow_map,
             &self.shadowed_tri_col_batch.draw_unit(),
         )?;
@@ -140,7 +141,8 @@ impl DrawGame {
         self.shadowed_tri_col_batch.push_quad(
             &map_rect.translate(offset).into(),
             -1.0,
-            Color4::new(0.9, 0.9, 0.9, 1.0),
+            //Color4::new(0.9, 0.9, 0.9, 1.0),
+            Color4::from_u8(175, 238, 238, 255),
         );
 
         for (player_id, player) in game.players.iter() {
@@ -168,9 +170,9 @@ impl DrawGame {
 
         for (is_active, letter) in letters {
             let color = if is_active {
-                Color4::from_u8(255, 0, 0, 255)
+                Color4::from_u8(255, 255, 255, 255)
             } else {
-                Color4::from_u8(100, 0, 0, 255)
+                Color4::from_u8(150, 150, 150, 255)
             };
 
             offset.x += self
@@ -203,32 +205,33 @@ impl DrawGame {
             radius: 150.0,
             angle: 0.0,
             angle_size: 2.0 * std::f32::consts::PI,
-            color: Color3::new(color.r / 2.0, color.g / 2.0, color.b / 2.0),
+            color: Color3::new(color.r / 3.0, color.g / 3.0, color.b / 3.0),
         });
         self.occluder_batch.push_occluder_quad(
             &rect.into(),
             Some(self.shadow_map.light_offset(self.lights.len() - 1)),
         );
 
-        if player_id.0 == 0 {
-            self.line_col_batch.push_quad_outline(
-                &player.axis_rect().translate(offset).into(),
-                0.0,
-                Color4::new(0.0, 0.0, 0.0, 1.0),
-            );
-        }
+        self.line_col_batch.push_quad_outline(
+            &player.axis_rect().translate(offset).into(),
+            0.0,
+            Color4::new(0.0, 0.0, 0.0, 1.0),
+        );
     }
 
     fn render_wall(&mut self, wall: &Wall, offset: Vector2<f32>) {
         self.plain_tri_col_batch.push_quad(
             &wall.0.translate(offset).into(),
             0.0,
-            Color4::from_u8(75, 75, 75, 255),
+            Color4::from_u8(0, 0, 0, 255),
         );
         self.occluder_batch
             .push_occluder_quad(&wall.0.translate(offset).into(), None);
-        /*self.line_col_batch
-        .push_quad_outline(&wall.0.into(), 0.0, Color4::new(0.0, 0.0, 0.0, 1.0));*/
+        self.line_col_batch.push_quad_outline(
+            &wall.0.translate(offset).into(),
+            0.0,
+            Color4::new(0.8, 0.8, 0.8, 1.0),
+        );
     }
 
     fn metrics_plot(&self, max_time: LocalTime, metrics: &Metrics) -> Plot {

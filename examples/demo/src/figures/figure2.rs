@@ -45,7 +45,7 @@ impl Server {
         self.tick_timer.advance(dt);
 
         while self.tick_timer.trigger() {
-            for (_, sender, input) in mock_net.receive_server() {
+            for (_, sender, input) in mock_net.receive_from_clients() {
                 self.game.run_input(sender, &input);
 
                 // Only for visualization:
@@ -79,7 +79,7 @@ impl User {
         input_state: &InputState,
         mock_net: &mut MockNet<ServerMsg, ClientMsg>,
     ) {
-        let messages = mock_net.receive_client(self.id);
+        let messages = mock_net.receive_from_server(self.id);
 
         // Always immediately display the latest state we receive from the
         // server.
@@ -173,8 +173,8 @@ impl Figure for Figure2 {
                 (
                     "Brad",
                     Some(&brad.latest_server_game),
-                    None,
                     Some(brad.last_input.clone()),
+                    None,
                 ),
                 (
                     "Server",

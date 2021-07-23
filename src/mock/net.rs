@@ -69,7 +69,7 @@ impl<S, C> MockNet<S, C> {
         socket.server_out.send(&socket.params.server_out, message);
     }
 
-    pub fn receive_client(&mut self, receiver: PlayerId) -> Vec<(LocalTime, S)> {
+    pub fn receive_from_server(&mut self, receiver: PlayerId) -> Vec<(LocalTime, S)> {
         let socket = self.socket_mut(receiver);
         let mut messages = Vec::new();
         while let Some(message) = socket.server_out.receive() {
@@ -79,7 +79,7 @@ impl<S, C> MockNet<S, C> {
         messages
     }
 
-    pub fn receive_server(&mut self) -> Vec<(LocalTime, PlayerId, C)> {
+    pub fn receive_from_clients(&mut self) -> Vec<(LocalTime, PlayerId, C)> {
         let mut messages = Vec::new();
         for (sender, socket) in self.sockets.iter_mut() {
             while let Some((receive_time, message)) = socket.client_out.receive() {

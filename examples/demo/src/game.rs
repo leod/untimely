@@ -201,7 +201,7 @@ impl Game {
 
     fn walls() -> Vec<Wall> {
         // Border size
-        let b = 5.0;
+        let b = 4.0;
 
         let w = Self::MAP_WIDTH;
         let h = Self::MAP_HEIGHT;
@@ -229,7 +229,7 @@ impl Game {
             }),
             Wall(AxisRect {
                 center: Point2::new(b * 2.0 + 215.0, h / 2.0),
-                size: Vector2::new(50.0, b),
+                size: Vector2::new(50.0, b * 2.0),
             }),
         ]
     }
