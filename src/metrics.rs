@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{LocalClock, LocalDt, LocalTime, Samples};
+use crate::{LocalClock, LocalDt, Samples};
 
 #[derive(Debug, Clone)]
 pub struct Gauge {

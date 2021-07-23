@@ -1,35 +1,142 @@
-use malen::{
-    draw::plot::{Axis, Line, Plot, Plotting},
-    Canvas, Color4, InputState,
-};
-use nalgebra::{Matrix3, Vector2};
+use malen::{Canvas, InputState};
 use untimely::{
-    mock::MockNet, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum,
+    mock::MockNet, DejitterBuffer, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer,
+    PlaybackClockParams, PlayerId, TickNum, TickPlayback,
 };
 
 use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameInput, GameParams};
 
-type ServerMsg = Game;
-type ClientMsg = GameInput;
+type ServerMsg = (TickNum, Game);
+type ClientMsg = (TickNum, GameInput);
 
-const SEND_TICK_DELTA: u64 = 3;
+const NUM_SEND_TICKS: usize = 3;
+
+struct Client {
+    inputs: DejitterBuffer<GameInput>,
+    last_input: GameInput,
+}
 
 struct Server {
     game: Game,
     tick_num: TickNum,
     tick_timer: PeriodicTimer,
 
-    // Only for visualization:
-    last_inputs: Vec<GameInput>,
+    clients: Vec<Client>,
 }
 
 struct User {
     id: PlayerId,
-    latest_server_game: Game,
-    input_timer: PeriodicTimer,
+    name: String,
+    playback: TickPlayback<(TickNum, Game)>,
 
     // Only for visualization:
     last_input: GameInput,
+}
+
+impl Client {
+    pub fn new(tick_dt: LocalDt, clock: LocalClock) -> Self {
+        Self {
+            inputs: DejitterBuffer::new(tick_dt, LocalDt::from_secs(5.0), clock),
+            last_input: GameInput::default(),
+        }
+    }
+}
+
+impl Server {
+    fn new(clock: LocalClock) -> Self {
+        let game = Game::default();
+        let tick_timer = PeriodicTimer::new(game.params.dt.to_local_dt());
+
+        Self {
+            game: game.clone(),
+            tick_timer,
+            tick_num: TickNum::zero(),
+            clients: vec![
+                Client::new(game.params.dt.to_local_dt(), clock.clone()),
+                Client::new(game.params.dt.to_local_dt(), clock.clone()),
+            ],
+        }
+    }
+
+    fn update(&mut self, dt: LocalDt, mock_net: &mut MockNet<ServerMsg, ClientMsg>) {
+        for (receive_time, sender, (input_num, input)) in mock_net.receive_server() {
+            self.clients[sender.to_usize()]
+                .inputs
+                .insert(receive_time, input_num, input);
+        }
+
+        self.tick_timer.advance(dt);
+
+        if self.tick_timer.trigger() {
+            for (index, client) in self.clients.iter_mut().enumerate() {
+                let player_id = PlayerId(index as u32);
+                let mut any_input = false;
+
+                while let Some((_tick_num, input)) = client.inputs.pop() {
+                    self.game.run_input(player_id, &input);
+                    client.last_input = input.clone();
+                    any_input = true;
+                }
+
+                if !any_input {
+                    self.game.run_input(player_id, &client.last_input);
+                }
+            }
+
+            if self.tick_num.to_usize() % NUM_SEND_TICKS == 0 {
+                for client in self.game.players.keys() {
+                    mock_net.send_to_client(*client, (self.tick_num, self.game.clone()));
+                }
+            }
+
+            self.game.time += self.game.params.dt;
+            self.tick_num = self.tick_num.succ();
+        }
+    }
+}
+
+impl User {
+    fn new(id: u32, name: String, clock: LocalClock) -> Self {
+        User {
+            id: PlayerId(id),
+            name,
+            playback: TickPlayback::new(
+                clock,
+                PlaybackClockParams::for_interpolation(
+                    GameParams::default().dt * NUM_SEND_TICKS as f64,
+                ),
+            ),
+            last_input: GameInput::default(),
+        }
+    }
+
+    fn update(
+        &mut self,
+        dt: LocalDt,
+        input_state: &InputState,
+        mock_net: &mut MockNet<ServerMsg, ClientMsg>,
+    ) {
+        for (receive_time, tick) in mock_net.receive_client(self.id) {
+            self.playback.record_tick(receive_time, tick.1.time, tick);
+        }
+
+        let started_ticks = self.playback.advance(dt);
+
+        let my_input = current_game_input(self.id, self.playback.playback_time(), input_state);
+        for (_, (tick_num, _)) in started_ticks {
+            mock_net.send_to_server(self.id, (tick_num, my_input.clone()));
+            self.last_input = my_input.clone();
+        }
+    }
+
+    fn game(&self) -> Option<Game> {
+        self.playback.interpolation().map(|interp| {
+            interp
+                .current_value
+                .1
+                .interpolate(&interp.next_value.1, interp.alpha)
+        })
+    }
 }
 
 pub struct Figure3 {
@@ -42,79 +149,6 @@ pub struct Figure3 {
     metrics: Metrics,
     canvas: Canvas,
     draw_game: DrawGame,
-    plotting: Plotting,
-}
-
-impl Server {
-    fn new() -> Self {
-        let game = Game::default();
-        let tick_timer = PeriodicTimer::new(game.params.dt.to_local_dt());
-
-        Self {
-            game,
-            tick_timer,
-            tick_num: TickNum::zero(),
-            last_inputs: vec![GameInput::default(); 2],
-        }
-    }
-
-    fn update(&mut self, dt: LocalDt, mock_net: &mut MockNet<ServerMsg, ClientMsg>) {
-        self.tick_timer.advance(dt);
-
-        if self.tick_timer.trigger() {
-            for (_, sender, input) in mock_net.receive_server() {
-                self.game.run_input(sender, &input);
-
-                // Only for visualization:
-                self.last_inputs[sender.0 as usize] = input;
-            }
-            self.game.time += self.game.params.dt;
-            self.tick_num = self.tick_num.succ();
-
-            if self.tick_num.to_u64() % SEND_TICK_DELTA == 0 {
-                for client in self.game.players.keys() {
-                    mock_net.send_to_client(*client, self.game.clone());
-                }
-            }
-        }
-    }
-}
-
-impl User {
-    fn new(id: u32) -> Self {
-        User {
-            id: PlayerId(id),
-            latest_server_game: Game::default(),
-            input_timer: PeriodicTimer::new(GameParams::default().dt.to_local_dt()),
-            last_input: GameInput::default(),
-        }
-    }
-
-    fn update(
-        &mut self,
-        dt: LocalDt,
-        input_state: &InputState,
-        mock_net: &mut MockNet<ServerMsg, ClientMsg>,
-    ) {
-        let messages = mock_net.receive_client(self.id);
-
-        // Always immediately display the latest state we receive from the
-        // server.
-        if let Some(last_message) = messages.last() {
-            self.latest_server_game = last_message.1.clone();
-        }
-
-        // Send input periodically.
-        self.input_timer.advance(dt);
-
-        if self.input_timer.trigger() {
-            let my_input = current_game_input(self.id, self.latest_server_game.time, input_state);
-            mock_net.send_to_server(self.id, my_input);
-
-            // Only for visualization:
-            self.last_input = my_input;
-        }
-    }
 }
 
 impl Figure3 {
@@ -123,18 +157,38 @@ impl Figure3 {
 
         let canvas = Canvas::from_element_id("figure3")?;
         let draw_game = DrawGame::new(&canvas)?;
-        let plotting = Plotting::new(&canvas)?;
 
         Ok(Self {
             clock: clock.clone(),
-            server: Server::new(),
-            users: vec![User::new(0), User::new(1)],
+            server: Server::new(clock.clone()),
+            users: vec![
+                User::new(0, "anna".to_string(), clock.clone()),
+                User::new(1, "brad".to_string(), clock.clone()),
+            ],
             mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)], clock.clone()),
             metrics: Metrics::new(LocalDt::from_secs(5.0), clock.clone()),
             canvas,
             draw_game,
-            plotting,
         })
+    }
+
+    fn record_metrics(&mut self) {
+        for user in self.users.iter() {
+            let time_user = user.playback.playback_time().to_secs();
+            let time_server = (self.server.game.time
+                + self.server.tick_timer.accumulator().to_game_dt())
+            .to_secs();
+
+            user.playback.record_metrics(&user.name, &mut self.metrics);
+            self.metrics.record_gauge(
+                &format!("{}_server_delay", user.name),
+                time_server - time_user,
+            );
+            self.metrics.record_gauge(
+                &format!("{}_stream_server_delay", user.name),
+                time_server - user.playback.playback_clock().stream_time().to_secs(),
+            );
+        }
     }
 }
 
@@ -153,14 +207,7 @@ impl Figure for Figure3 {
             client.update(dt, self.canvas.input_state(), &mut self.mock_net);
         }
 
-        // Record metrics for visualization.
-        let time_anna = self.users[0].latest_server_game.time.to_secs();
-        let time_brad = self.users[1].latest_server_game.time.to_secs();
-        let time_server = self.server.game.time.to_secs();
-        self.metrics
-            .record_gauge("game_delay_anna", time_server - time_anna);
-        self.metrics
-            .record_gauge("game_delay_brad", time_server - time_brad);
+        self.record_metrics();
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
@@ -173,83 +220,27 @@ impl Figure for Figure3 {
             &[
                 (
                     "Anna",
-                    &anna.latest_server_game,
-                    Some(anna.last_input),
+                    anna.game().as_ref(),
+                    Some(anna.last_input.clone()),
                     None,
                 ),
                 (
                     "Brad",
-                    &brad.latest_server_game,
+                    brad.game().as_ref(),
                     None,
-                    Some(brad.last_input),
+                    Some(brad.last_input.clone()),
                 ),
                 (
                     "Server",
-                    &serv.game,
-                    Some(serv.last_inputs[0]),
-                    Some(serv.last_inputs[1]),
+                    Some(&serv.game),
+                    Some(serv.clients[0].last_input.clone()),
+                    Some(serv.clients[1].last_input.clone()),
                 ),
             ],
         )?;
-        self.draw_plot()?;
+        self.draw_game
+            .draw_plot(&self.canvas, self.clock.local_time(), &self.metrics)?;
 
         Ok(())
-    }
-}
-
-impl Figure3 {
-    fn plot(&self) -> Plot {
-        let mut lines = Vec::new();
-
-        let shift = |points: &[(f64, f64)]| {
-            points
-                .iter()
-                .map(|(x, y)| (*x - self.clock.local_time().to_secs(), *y))
-                .collect::<Vec<_>>()
-        };
-
-        if let Some(gauge) = self.metrics.get_gauge("game_delay_anna") {
-            lines.push(Line {
-                caption: "delay_anna".to_string(),
-                color: Color4::new(0.2, 0.8, 0.2, 1.0),
-                points: shift(&gauge.plot_points()),
-            });
-        }
-        if let Some(gauge) = self.metrics.get_gauge("game_delay_brad") {
-            lines.push(Line {
-                caption: "delay_brad".to_string(),
-                color: Color4::new(0.2, 0.2, 0.8, 1.0),
-                points: shift(&gauge.plot_points()),
-            });
-        }
-
-        Plot {
-            size: Vector2::new(990.0, 200.0),
-            x_axis: Axis {
-                label: "local time [s]".to_string(),
-                range: Some((-5.0, 0.0)),
-                tics: 1.0,
-                tic_precision: 1,
-            },
-            y_axis: Axis {
-                label: "game time [s]".to_string(),
-                range: Some((0.0, 0.5)),
-                tics: 0.1,
-                tic_precision: 1,
-            },
-            axis_color: Color4::new(0.0, 0.0, 0.0, 1.0),
-            background_color: None,
-            text_color: Color4::new(0.0, 0.0, 0.0, 1.0),
-            lines,
-        }
-    }
-
-    fn draw_plot(&mut self) -> Result<(), malen::Error> {
-        let transform = self.canvas.screen().orthographic_projection()
-            * Matrix3::new_translation(&Vector2::new(0.0, Game::MAP_HEIGHT + 15.0));
-
-        let plot = self.plot();
-        self.plotting
-            .draw(&self.canvas, self.draw_game.font_mut(), &transform, &plot)
     }
 }

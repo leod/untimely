@@ -4,9 +4,9 @@ use nalgebra::{Point2, Vector2};
 
 use malen::AxisRect;
 
-use untimely::{EntityId, GameDt, GameTime, PlayerId, TickNum};
+use untimely::{join, EntityId, GameDt, GameTime, PlayerId};
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct GameInput {
     pub left: bool,
     pub right: bool,
@@ -29,6 +29,13 @@ impl Player {
             center: self.pos,
             size: Vector2::new(Self::SIZE, Self::SIZE),
         }
+    }
+
+    pub fn interpolate(&self, other: &Self, alpha: f64) -> Self {
+        let alpha = alpha as f32;
+        let pos = self.pos + alpha * (other.pos - self.pos);
+
+        Self { pos }
     }
 }
 
@@ -119,6 +126,27 @@ impl Game {
             }
 
             self.players.insert(player_id, player);
+        }
+    }
+
+    pub fn interpolate(&self, other: &Self, alpha: f64) -> Self {
+        use join::FullJoinItem::*;
+
+        let time = self.time + (other.time - self.time) * alpha;
+        let players = join::full_join(self.players.iter(), other.players.iter())
+            .filter_map(|join_item| match join_item {
+                Left(id, player) => Some((*id, player.clone())),
+                Right(_, _) => None,
+                Both(id, player1, player2) => Some((*id, player1.interpolate(player2, alpha))),
+            })
+            .collect();
+
+        Game {
+            params: self.params.clone(),
+            time,
+            players,
+            bullets: self.bullets.clone(),
+            walls: self.walls.clone(),
         }
     }
 

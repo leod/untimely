@@ -17,8 +17,8 @@ where
         .collect();
     let time_pairs = pareen::slice(&time_pairs);
 
-    let slope = 1.0;
-    let regression_line = pareen::simple_linear_regression_with_slope(slope, time_pairs);
+    //let slope = 1.0;
+    let regression_line = pareen::simple_linear_regression(time_pairs);
 
     Some(Time::from_secs(
         regression_line.eval(current_local_time.to_secs()),

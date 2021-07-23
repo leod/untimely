@@ -1,5 +1,6 @@
 use crate::time::LocalDt;
 
+#[derive(Debug, Clone)]
 pub struct PeriodicTimer {
     period: LocalDt,
     accumulator: LocalDt,
@@ -11,6 +12,18 @@ impl PeriodicTimer {
             period,
             accumulator: LocalDt::zero(),
         }
+    }
+
+    pub fn period(&self) -> LocalDt {
+        self.period
+    }
+
+    pub fn accumulator(&self) -> LocalDt {
+        self.accumulator
+    }
+
+    pub fn percent(&self) -> f64 {
+        self.accumulator / self.period
     }
 
     pub fn advance(&mut self, dt: LocalDt) {

@@ -1,3 +1,5 @@
+use crate::Metrics;
+
 use super::{predict_stream_time, GameDt, GameTime, LocalClock, LocalDt, LocalTime, Samples};
 
 pub fn time_warp(residual: GameDt) -> f64 {
@@ -9,6 +11,16 @@ pub struct PlaybackClockParams {
     pub delay: GameDt,
     pub max_overtake: GameDt,
     pub max_sample_age: LocalDt,
+}
+
+impl PlaybackClockParams {
+    pub fn for_interpolation(tick_send_dt: GameDt) -> Self {
+        PlaybackClockParams {
+            delay: tick_send_dt * 2.0,
+            max_overtake: GameDt::zero(),
+            max_sample_age: LocalDt::from_secs(5.0),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +43,11 @@ impl PlaybackClock {
         }
     }
 
+    pub fn stream_time(&self) -> GameTime {
+        predict_stream_time(&self.stream_samples, self.clock.local_time())
+            .unwrap_or(GameTime::zero())
+    }
+
     pub fn playback_time(&self) -> GameTime {
         self.playback_time
     }
@@ -40,9 +57,7 @@ impl PlaybackClock {
     }
 
     pub fn advance(&mut self, dt: LocalDt) {
-        let stream_time = predict_stream_time(&self.stream_samples, self.clock.local_time())
-            .unwrap_or(GameTime::zero());
-        let target_time = stream_time - self.params.delay;
+        let target_time = self.stream_time() - self.params.delay;
         let residual = target_time - self.playback_time;
         let max_stream_time = self
             .stream_samples
@@ -54,5 +69,12 @@ impl PlaybackClock {
 
         self.playback_time += dt.to_game_dt() * time_warp(residual);
         self.playback_time = self.playback_time.min(max_playback_time);
+    }
+
+    pub fn record_metrics(&self, prefix: &str, metrics: &mut Metrics) {
+        metrics.record_gauge(
+            &format!("{}_stream_delay", prefix),
+            (self.stream_time() - self.playback_time).to_secs(),
+        );
     }
 }

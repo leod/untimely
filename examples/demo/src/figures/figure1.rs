@@ -56,7 +56,12 @@ impl Figure for Figure1 {
 
         self.draw_game.draw(
             &self.canvas,
-            &[("Anna", &self.game, Some(self.last_input), None)],
+            &[(
+                "Anna",
+                Some(&self.game),
+                Some(self.last_input.clone()),
+                None,
+            )],
         )?;
 
         Ok(())

@@ -28,6 +28,10 @@ impl TickNum {
         self.0
     }
 
+    pub fn to_usize(self) -> usize {
+        self.0 as usize
+    }
+
     pub fn to_tick_time(self) -> TickTime {
         TickTime::from_secs(self.0 as f64)
     }

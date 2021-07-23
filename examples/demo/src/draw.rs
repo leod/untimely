@@ -1,13 +1,14 @@
 use malen::{
     draw::{
+        plot::{Axis, Line, Plot, Plotting},
         ColPass, ColVertex, Font, Light, LineBatch, OccluderBatch, ShadowColPass, ShadowMap,
         TextBatch, TriBatch,
     },
     AxisRect, Camera, Canvas, Color3, Color4,
 };
-use nalgebra::{Point2, Point3, Vector2};
+use nalgebra::{Matrix3, Point2, Point3, Vector2};
 
-use untimely::PlayerId;
+use untimely::{LocalTime, Metrics, PlayerId};
 
 use crate::game::{Game, GameInput, Player, Wall};
 
@@ -25,6 +26,8 @@ pub struct DrawGame {
     shadow_col_pass: ShadowColPass,
 
     shadow_map: ShadowMap,
+
+    plotting: Plotting,
 }
 
 impl DrawGame {
@@ -44,6 +47,7 @@ impl DrawGame {
             lights: Vec::new(),
             shadow_col_pass: ShadowColPass::new(canvas)?,
             shadow_map: ShadowMap::new(canvas, 512, 32)?,
+            plotting: Plotting::new(canvas)?,
         })
     }
 
@@ -54,7 +58,7 @@ impl DrawGame {
     pub fn draw(
         &mut self,
         canvas: &Canvas,
-        games: &[(&str, &Game, Option<GameInput>, Option<GameInput>)],
+        games: &[(&str, Option<&Game>, Option<GameInput>, Option<GameInput>)],
     ) -> Result<(), malen::Error> {
         self.occluder_batch.clear();
         self.shadowed_tri_col_batch.clear();
@@ -68,7 +72,9 @@ impl DrawGame {
             let mut x_start = 0.0;
 
             for (name, game, input1, input2) in games.iter() {
-                self.render_game(game, Vector2::new(x_start, 0.0));
+                if let Some(game) = game {
+                    self.render_game(game, Vector2::new(x_start, 0.0));
+                }
 
                 self.font.write(
                     20.0,
@@ -110,6 +116,20 @@ impl DrawGame {
             .draw(canvas, &transform, &self.text_batch.draw_unit())?;
 
         Ok(())
+    }
+
+    pub fn draw_plot(
+        &mut self,
+        canvas: &Canvas,
+        max_time: LocalTime,
+        metrics: &Metrics,
+    ) -> Result<(), malen::Error> {
+        let transform = canvas.screen().orthographic_projection()
+            * Matrix3::new_translation(&Vector2::new(0.0, Game::MAP_HEIGHT + 15.0));
+
+        let plot = self.metrics_plot(max_time, metrics);
+        self.plotting
+            .draw(canvas, &mut self.font, &transform, &plot)
     }
 
     fn render_game(&mut self, game: &Game, offset: Vector2<f32>) {
@@ -209,5 +229,79 @@ impl DrawGame {
             .push_occluder_quad(&wall.0.translate(offset).into(), None);
         /*self.line_col_batch
         .push_quad_outline(&wall.0.into(), 0.0, Color4::new(0.0, 0.0, 0.0, 1.0));*/
+    }
+
+    fn metrics_plot(&self, max_time: LocalTime, metrics: &Metrics) -> Plot {
+        let mut lines = Vec::new();
+
+        let shift = |points: &[(f64, f64)]| {
+            points
+                .iter()
+                .map(|(x, y)| (*x - max_time.to_secs(), *y))
+                .collect::<Vec<_>>()
+        };
+
+        if let Some(gauge) = metrics.get_gauge("anna_server_delay") {
+            lines.push(Line {
+                caption: "anna_server_delay".to_string(),
+                color: Color4::new(0.2, 0.8, 0.2, 1.0),
+                points: shift(&gauge.plot_points()),
+            });
+        }
+        if let Some(gauge) = metrics.get_gauge("brad_server_delay") {
+            lines.push(Line {
+                caption: "delay_server_brad".to_string(),
+                color: Color4::new(0.2, 0.2, 0.8, 1.0),
+                points: shift(&gauge.plot_points()),
+            });
+        }
+        if let Some(gauge) = metrics.get_gauge("anna_stream_delay") {
+            lines.push(Line {
+                caption: "anna_stream_delay".to_string(),
+                color: Color4::new(0.8, 0.8, 0.2, 1.0),
+                points: shift(&gauge.plot_points()),
+            });
+        }
+        if let Some(gauge) = metrics.get_gauge("brad_stream_delay") {
+            lines.push(Line {
+                caption: "brad_stream_delay".to_string(),
+                color: Color4::new(0.2, 0.8, 0.8, 1.0),
+                points: shift(&gauge.plot_points()),
+            });
+        }
+        /*if let Some(gauge) = metrics.get_gauge("anna_stream_server_delay") {
+            lines.push(Line {
+                caption: "anna_stream_server_delay".to_string(),
+                color: Color4::new(0.8, 0.0, 0.8, 1.0),
+                points: shift(&gauge.plot_points()),
+            });
+        }
+        if let Some(gauge) = metrics.get_gauge("brad_stream_server_delay") {
+            lines.push(Line {
+                caption: "brad_stream_server_delay".to_string(),
+                color: Color4::new(0.2, 0.8, 0.8, 1.0),
+                points: shift(&gauge.plot_points()),
+            });
+        }*/
+
+        Plot {
+            size: Vector2::new(990.0, 200.0),
+            x_axis: Axis {
+                label: "local time [s]".to_string(),
+                range: Some((-5.0, 0.0)),
+                tics: 1.0,
+                tic_precision: 1,
+            },
+            y_axis: Axis {
+                label: "game time [s]".to_string(),
+                range: Some((0.0, 1.0)),
+                tics: 0.2,
+                tic_precision: 1,
+            },
+            axis_color: Color4::new(0.0, 0.0, 0.0, 1.0),
+            background_color: None,
+            text_color: Color4::new(0.0, 0.0, 0.0, 1.0),
+            lines,
+        }
     }
 }

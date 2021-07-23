@@ -1,4 +1,6 @@
-use crate::{GameTime, LocalClock, LocalDt, LocalTime, PlaybackClock, PlaybackClockParams};
+use crate::{
+    GameTime, LocalClock, LocalDt, LocalTime, Metrics, PlaybackClock, PlaybackClockParams,
+};
 
 #[derive(Debug, Clone)]
 pub struct Interpolation<'a, T> {
@@ -28,6 +30,10 @@ where
             ticks: Vec::new(),
             current_tick: None,
         }
+    }
+
+    pub fn playback_clock(&self) -> &PlaybackClock {
+        &self.playback_clock
     }
 
     pub fn playback_time(&self) -> GameTime {
@@ -83,7 +89,7 @@ where
 
         match self
             .ticks
-            .binary_search_by(|(game_time, _)| game_time.partial_cmp(&receive_game_time).unwrap())
+            .binary_search_by(|(game_time, _)| receive_game_time.partial_cmp(&game_time).unwrap())
         {
             Ok(_) => {
                 // Ignore duplicate tick.
@@ -109,8 +115,12 @@ where
         started_ticks
     }
 
+    pub fn record_metrics(&self, prefix: &str, metrics: &mut Metrics) {
+        self.playback_clock.record_metrics(prefix, metrics);
+    }
+
     fn is_oldest_tick_ready(&self) -> bool {
-        self.ticks.first().map_or(false, |(oldest_time, _)| {
+        self.ticks.last().map_or(false, |(oldest_time, _)| {
             self.playback_time() >= *oldest_time
         })
     }

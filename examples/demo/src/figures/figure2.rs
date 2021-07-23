@@ -1,8 +1,4 @@
-use malen::{
-    draw::plot::{Axis, Line, Plot, Plotting},
-    Canvas, Color4, InputState,
-};
-use nalgebra::{Matrix3, Vector2};
+use malen::{Canvas, InputState};
 use untimely::{
     mock::MockNet, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum,
 };
@@ -30,19 +26,6 @@ struct User {
 
     // Only for visualization:
     last_input: GameInput,
-}
-
-pub struct Figure2 {
-    clock: LocalClock,
-
-    server: Server,
-    users: Vec<User>,
-    mock_net: MockNet<ServerMsg, ClientMsg>,
-
-    metrics: Metrics,
-    canvas: Canvas,
-    draw_game: DrawGame,
-    plotting: Plotting,
 }
 
 impl Server {
@@ -109,12 +92,24 @@ impl User {
 
         if self.input_timer.trigger() {
             let my_input = current_game_input(self.id, self.latest_server_game.time, input_state);
-            mock_net.send_to_server(self.id, my_input);
+            mock_net.send_to_server(self.id, my_input.clone());
 
             // Only for visualization:
             self.last_input = my_input;
         }
     }
+}
+
+pub struct Figure2 {
+    clock: LocalClock,
+
+    server: Server,
+    users: Vec<User>,
+    mock_net: MockNet<ServerMsg, ClientMsg>,
+
+    metrics: Metrics,
+    canvas: Canvas,
+    draw_game: DrawGame,
 }
 
 impl Figure2 {
@@ -123,7 +118,6 @@ impl Figure2 {
 
         let canvas = Canvas::from_element_id("figure2")?;
         let draw_game = DrawGame::new(&canvas)?;
-        let plotting = Plotting::new(&canvas)?;
 
         Ok(Self {
             clock: clock.clone(),
@@ -133,7 +127,6 @@ impl Figure2 {
             metrics: Metrics::new(LocalDt::from_secs(5.0), clock.clone()),
             canvas,
             draw_game,
-            plotting,
         })
     }
 }
@@ -158,9 +151,9 @@ impl Figure for Figure2 {
         let time_brad = self.users[1].latest_server_game.time.to_secs();
         let time_server = self.server.game.time.to_secs();
         self.metrics
-            .record_gauge("game_delay_anna", time_server - time_anna);
+            .record_gauge("anna_server_delay", time_server - time_anna);
         self.metrics
-            .record_gauge("game_delay_brad", time_server - time_brad);
+            .record_gauge("brad_server_delay", time_server - time_brad);
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
@@ -173,83 +166,27 @@ impl Figure for Figure2 {
             &[
                 (
                     "Anna",
-                    &anna.latest_server_game,
-                    Some(anna.last_input),
+                    Some(&anna.latest_server_game),
+                    Some(anna.last_input.clone()),
                     None,
                 ),
                 (
                     "Brad",
-                    &brad.latest_server_game,
+                    Some(&brad.latest_server_game),
                     None,
-                    Some(brad.last_input),
+                    Some(brad.last_input.clone()),
                 ),
                 (
                     "Server",
-                    &serv.game,
-                    Some(serv.last_inputs[0]),
-                    Some(serv.last_inputs[1]),
+                    Some(&serv.game),
+                    Some(serv.last_inputs[0].clone()),
+                    Some(serv.last_inputs[1].clone()),
                 ),
             ],
         )?;
-        self.draw_plot()?;
+        self.draw_game
+            .draw_plot(&self.canvas, self.clock.local_time(), &self.metrics)?;
 
         Ok(())
-    }
-}
-
-impl Figure2 {
-    fn plot(&self) -> Plot {
-        let mut lines = Vec::new();
-
-        let shift = |points: &[(f64, f64)]| {
-            points
-                .iter()
-                .map(|(x, y)| (*x - self.clock.local_time().to_secs(), *y))
-                .collect::<Vec<_>>()
-        };
-
-        if let Some(gauge) = self.metrics.get_gauge("game_delay_anna") {
-            lines.push(Line {
-                caption: "delay_anna".to_string(),
-                color: Color4::new(0.2, 0.8, 0.2, 1.0),
-                points: shift(&gauge.plot_points()),
-            });
-        }
-        if let Some(gauge) = self.metrics.get_gauge("game_delay_brad") {
-            lines.push(Line {
-                caption: "delay_brad".to_string(),
-                color: Color4::new(0.2, 0.2, 0.8, 1.0),
-                points: shift(&gauge.plot_points()),
-            });
-        }
-
-        Plot {
-            size: Vector2::new(990.0, 200.0),
-            x_axis: Axis {
-                label: "local time [s]".to_string(),
-                range: Some((-5.0, 0.0)),
-                tics: 1.0,
-                tic_precision: 1,
-            },
-            y_axis: Axis {
-                label: "game time [s]".to_string(),
-                range: Some((0.0, 0.5)),
-                tics: 0.1,
-                tic_precision: 1,
-            },
-            axis_color: Color4::new(0.0, 0.0, 0.0, 1.0),
-            background_color: None,
-            text_color: Color4::new(0.0, 0.0, 0.0, 1.0),
-            lines,
-        }
-    }
-
-    fn draw_plot(&mut self) -> Result<(), malen::Error> {
-        let transform = self.canvas.screen().orthographic_projection()
-            * Matrix3::new_translation(&Vector2::new(0.0, Game::MAP_HEIGHT + 15.0));
-
-        let plot = self.plot();
-        self.plotting
-            .draw(&self.canvas, self.draw_game.font_mut(), &transform, &plot)
     }
 }

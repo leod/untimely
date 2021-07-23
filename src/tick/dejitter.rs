@@ -46,7 +46,7 @@ impl<T> DejitterBuffer<T> {
 
         match self
             .buffer
-            .binary_search_by_key(&receive_num, |(tick_num, _)| *tick_num)
+            .binary_search_by(|(tick_num, _)| receive_num.cmp(tick_num))
         {
             Ok(_) => {
                 // Ignore duplicate tick.
@@ -63,7 +63,7 @@ impl<T> DejitterBuffer<T> {
         let stream_num =
             predict_stream_time(&self.time_samples, delayed_time).map(TickNum::from_tick_time);
 
-        let oldest_item_is_ready = self.buffer.first().map_or(false, |(oldest_num, _)| {
+        let oldest_item_is_ready = self.buffer.last().map_or(false, |(oldest_num, _)| {
             stream_num.map_or(false, |stream_num| stream_num >= *oldest_num)
         });
 
