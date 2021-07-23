@@ -55,7 +55,7 @@ where
     }
 
     pub fn next_tick(&self) -> Option<(GameTime, &T)> {
-        self.ticks.first().map(|(time, value)| (*time, value))
+        self.ticks.last().map(|(time, value)| (*time, value))
     }
 
     pub fn interpolation(&self) -> Option<Interpolation<T>> {

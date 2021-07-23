@@ -130,12 +130,19 @@ impl User {
     }
 
     fn game(&self) -> Option<Game> {
-        self.playback.interpolation().map(|interp| {
-            interp
-                .current_value
-                .1
-                .interpolate(&interp.next_value.1, interp.alpha)
-        })
+        self.playback
+            .interpolation()
+            .map(|interp| {
+                interp
+                    .current_value
+                    .1
+                    .interpolate(&interp.next_value.1, interp.alpha)
+            })
+            .or_else(|| {
+                self.playback
+                    .current_tick()
+                    .map(|(_, (_, game))| game.clone())
+            })
     }
 }
 
