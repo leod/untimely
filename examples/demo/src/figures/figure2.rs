@@ -12,6 +12,8 @@ use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameI
 type ServerMsg = Game;
 type ClientMsg = GameInput;
 
+const SEND_TICK_DELTA: u32 = 3;
+
 struct Server {
     game: Game,
     tick_num: TickNum,
@@ -69,7 +71,7 @@ impl Server {
             self.game.time += self.game.params.dt;
             self.tick_num = self.tick_num.succ();
 
-            if self.tick_num.to_u32() % 3 == 0 {
+            if self.tick_num.to_u32() % SEND_TICK_DELTA == 0 {
                 for client in self.game.players.keys() {
                     mock_net.send_to_client(*client, self.game.clone());
                 }

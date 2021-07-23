@@ -3,13 +3,13 @@ use malen::{
         ColPass, ColVertex, Font, Light, LineBatch, OccluderBatch, ShadowColPass, ShadowMap,
         TextBatch, TriBatch,
     },
-    AxisRect, Camera, Canvas, Color3, Color4, Screen,
+    AxisRect, Camera, Canvas, Color3, Color4,
 };
-use nalgebra::{Matrix3, Point2, Point3, Vector2};
+use nalgebra::{Point2, Point3, Vector2};
 
 use untimely::PlayerId;
 
-use crate::game::{Bullet, Game, GameInput, Player, Wall};
+use crate::game::{Game, GameInput, Player, Wall};
 
 pub struct DrawGame {
     font: Font,
