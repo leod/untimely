@@ -3,7 +3,7 @@ use std::{cmp::Ordering, collections::BinaryHeap};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 
-use crate::time::{LocalDt, LocalTime};
+use crate::{LocalClock, LocalDt, LocalTime};
 
 #[derive(Debug, Clone)]
 pub struct MockChannelParams {
@@ -38,35 +38,31 @@ struct Message<T>(LocalTime, T);
 
 #[derive(Clone)]
 pub struct MockChannel<T> {
+    clock: LocalClock,
     messages_in_transit: BinaryHeap<Message<T>>,
 }
 
-impl<T> Default for MockChannel<T> {
-    fn default() -> Self {
-        MockChannel {
+impl<T> MockChannel<T> {
+    pub fn new(clock: LocalClock) -> Self {
+        Self {
+            clock,
             messages_in_transit: BinaryHeap::new(),
         }
     }
-}
 
-impl<T> MockChannel<T> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn send(&mut self, params: &MockChannelParams, current_time: LocalTime, message: T) {
+    pub fn send(&mut self, params: &MockChannelParams, message: T) {
         let rng = &mut rand::thread_rng();
 
         if let Some(residual) = params.sample_residual(rng) {
-            let arrival_time = current_time + residual;
+            let arrival_time = self.clock.local_time() + residual;
             self.messages_in_transit
                 .push(Message(arrival_time, message));
         }
     }
 
-    pub fn receive(&mut self, current_time: LocalTime) -> Option<(LocalTime, T)> {
+    pub fn receive(&mut self) -> Option<(LocalTime, T)> {
         if let Some(Message(oldest_arrival_time, _)) = self.messages_in_transit.peek() {
-            if current_time > *oldest_arrival_time {
+            if self.clock.local_time() > *oldest_arrival_time {
                 let oldest_entry = self.messages_in_transit.pop().unwrap();
                 Some((oldest_entry.0, oldest_entry.1))
             } else {

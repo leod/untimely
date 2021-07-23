@@ -41,8 +41,8 @@ impl<S, C> MockNet<S, C> {
                     *player,
                     MockSocket {
                         params: MockSocketParams::perfect(),
-                        server_out: MockChannel::new(),
-                        client_out: MockChannel::new(),
+                        server_out: MockChannel::new(clock.clone()),
+                        client_out: MockChannel::new(clock.clone()),
                     },
                 )
             })
@@ -60,26 +60,19 @@ impl<S, C> MockNet<S, C> {
     }
 
     pub fn send_to_server(&mut self, sender: PlayerId, message: C) {
-        let time = self.clock.local_time();
         let socket = self.socket_mut(sender);
-        socket
-            .client_out
-            .send(&socket.params.client_out, time, message);
+        socket.client_out.send(&socket.params.client_out, message);
     }
 
     pub fn send_to_client(&mut self, receiver: PlayerId, message: S) {
-        let time = self.clock.local_time();
         let socket = self.socket_mut(receiver);
-        socket
-            .server_out
-            .send(&socket.params.server_out, time, message);
+        socket.server_out.send(&socket.params.server_out, message);
     }
 
     pub fn receive_client(&mut self, receiver: PlayerId) -> Vec<(LocalTime, S)> {
-        let time = self.clock.local_time();
         let socket = self.socket_mut(receiver);
         let mut messages = Vec::new();
-        while let Some(message) = socket.server_out.receive(time) {
+        while let Some(message) = socket.server_out.receive() {
             messages.push(message);
         }
 
@@ -89,15 +82,12 @@ impl<S, C> MockNet<S, C> {
     pub fn receive_server(&mut self) -> Vec<(LocalTime, PlayerId, C)> {
         let mut messages = Vec::new();
         for (sender, socket) in self.sockets.iter_mut() {
-            while let Some((receive_time, message)) =
-                socket.client_out.receive(self.clock.local_time())
-            {
+            while let Some((receive_time, message)) = socket.client_out.receive() {
                 messages.push((receive_time, *sender, message));
             }
         }
 
         messages.sort_by(|(time1, _, _), (time2, _, _)| time1.partial_cmp(time2).unwrap());
-
         messages
     }
 }
