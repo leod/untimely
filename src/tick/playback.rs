@@ -108,6 +108,7 @@ where
 
         while self.is_oldest_tick_ready() {
             let oldest_tick = self.ticks.pop().unwrap();
+
             started_ticks.push(oldest_tick.clone());
             self.current_tick = Some(oldest_tick);
         }

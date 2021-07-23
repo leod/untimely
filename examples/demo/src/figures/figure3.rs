@@ -67,7 +67,7 @@ impl Server {
 
         self.tick_timer.advance(dt);
 
-        if self.tick_timer.trigger() {
+        while self.tick_timer.trigger() {
             for (index, client) in self.clients.iter_mut().enumerate() {
                 let player_id = PlayerId(index as u32);
                 let mut any_input = false;

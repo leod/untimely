@@ -243,28 +243,28 @@ impl DrawGame {
 
         if let Some(gauge) = metrics.get_gauge("anna_server_delay") {
             lines.push(Line {
-                caption: "anna_server_delay".to_string(),
+                caption: "delay anna to server".to_string(),
                 color: Color4::new(0.2, 0.8, 0.2, 1.0),
-                points: shift(&gauge.plot_points()),
-            });
-        }
-        if let Some(gauge) = metrics.get_gauge("brad_server_delay") {
-            lines.push(Line {
-                caption: "delay_server_brad".to_string(),
-                color: Color4::new(0.2, 0.2, 0.8, 1.0),
                 points: shift(&gauge.plot_points()),
             });
         }
         if let Some(gauge) = metrics.get_gauge("anna_stream_delay") {
             lines.push(Line {
-                caption: "anna_stream_delay".to_string(),
+                caption: "delay anna to stream".to_string(),
                 color: Color4::new(0.8, 0.8, 0.2, 1.0),
+                points: shift(&gauge.plot_points()),
+            });
+        }
+        if let Some(gauge) = metrics.get_gauge("brad_server_delay") {
+            lines.push(Line {
+                caption: "delay brad to server".to_string(),
+                color: Color4::new(0.2, 0.2, 0.8, 1.0),
                 points: shift(&gauge.plot_points()),
             });
         }
         if let Some(gauge) = metrics.get_gauge("brad_stream_delay") {
             lines.push(Line {
-                caption: "brad_stream_delay".to_string(),
+                caption: "delay brad to stream".to_string(),
                 color: Color4::new(0.2, 0.8, 0.8, 1.0),
                 points: shift(&gauge.plot_points()),
             });
@@ -294,8 +294,8 @@ impl DrawGame {
             },
             y_axis: Axis {
                 label: "game time [s]".to_string(),
-                range: Some((0.0, 1.0)),
-                tics: 0.2,
+                range: Some((0.0, 0.5)),
+                tics: 0.1,
                 tic_precision: 1,
             },
             axis_color: Color4::new(0.0, 0.0, 0.0, 1.0),

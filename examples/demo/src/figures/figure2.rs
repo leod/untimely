@@ -44,7 +44,7 @@ impl Server {
     fn update(&mut self, dt: LocalDt, mock_net: &mut MockNet<ServerMsg, ClientMsg>) {
         self.tick_timer.advance(dt);
 
-        if self.tick_timer.trigger() {
+        while self.tick_timer.trigger() {
             for (_, sender, input) in mock_net.receive_server() {
                 self.game.run_input(sender, &input);
 
@@ -90,7 +90,7 @@ impl User {
         // Send input periodically.
         self.input_timer.advance(dt);
 
-        if self.input_timer.trigger() {
+        while self.input_timer.trigger() {
             let my_input = current_game_input(self.id, self.latest_server_game.time, input_state);
             mock_net.send_to_server(self.id, my_input.clone());
 
