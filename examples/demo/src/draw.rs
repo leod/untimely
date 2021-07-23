@@ -203,7 +203,7 @@ impl DrawGame {
             radius: 150.0,
             angle: 0.0,
             angle_size: 2.0 * std::f32::consts::PI,
-            color: Color3::new(color.r, color.g, color.b),
+            color: Color3::new(color.r / 2.0, color.g / 2.0, color.b / 2.0),
         });
         self.occluder_batch.push_occluder_quad(
             &rect.into(),
