@@ -12,7 +12,7 @@ use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameI
 type ServerMsg = Game;
 type ClientMsg = GameInput;
 
-const SEND_TICK_DELTA: u32 = 3;
+const SEND_TICK_DELTA: u64 = 3;
 
 struct Server {
     game: Game,
@@ -23,7 +23,7 @@ struct Server {
     last_inputs: Vec<GameInput>,
 }
 
-struct Client {
+struct User {
     id: PlayerId,
     latest_server_game: Game,
     input_timer: PeriodicTimer,
@@ -36,7 +36,7 @@ pub struct Figure2 {
     clock: LocalClock,
 
     server: Server,
-    clients: Vec<Client>,
+    users: Vec<User>,
     mock_net: MockNet<ServerMsg, ClientMsg>,
 
     metrics: Metrics,
@@ -71,7 +71,7 @@ impl Server {
             self.game.time += self.game.params.dt;
             self.tick_num = self.tick_num.succ();
 
-            if self.tick_num.to_u32() % SEND_TICK_DELTA == 0 {
+            if self.tick_num.to_u64() % SEND_TICK_DELTA == 0 {
                 for client in self.game.players.keys() {
                     mock_net.send_to_client(*client, self.game.clone());
                 }
@@ -80,9 +80,9 @@ impl Server {
     }
 }
 
-impl Client {
+impl User {
     fn new(id: u32) -> Self {
-        Client {
+        User {
             id: PlayerId(id),
             latest_server_game: Game::default(),
             input_timer: PeriodicTimer::new(GameParams::default().dt.to_local_dt()),
@@ -128,7 +128,7 @@ impl Figure2 {
         Ok(Self {
             clock: clock.clone(),
             server: Server::new(),
-            clients: vec![Client::new(0), Client::new(1)],
+            users: vec![User::new(0), User::new(1)],
             mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)], clock.clone()),
             metrics: Metrics::new(LocalDt::from_secs(5.0), clock.clone()),
             canvas,
@@ -149,13 +149,13 @@ impl Figure for Figure2 {
         //self.mock_net.set_params(PlayerId(1), get_socket_params("figure2", "brad"));
 
         self.server.update(dt, &mut self.mock_net);
-        for client in &mut self.clients {
+        for client in &mut self.users {
             client.update(dt, self.canvas.input_state(), &mut self.mock_net);
         }
 
         // Record metrics for visualization.
-        let time_anna = self.clients[0].latest_server_game.time.to_secs();
-        let time_brad = self.clients[1].latest_server_game.time.to_secs();
+        let time_anna = self.users[0].latest_server_game.time.to_secs();
+        let time_brad = self.users[1].latest_server_game.time.to_secs();
         let time_server = self.server.game.time.to_secs();
         self.metrics
             .record_gauge("game_delay_anna", time_server - time_anna);
@@ -164,8 +164,8 @@ impl Figure for Figure2 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        let anna = &self.clients[0];
-        let brad = &self.clients[1];
+        let anna = &self.users[0];
+        let brad = &self.users[1];
         let serv = &self.server;
 
         self.draw_game.draw(
