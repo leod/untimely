@@ -61,8 +61,4 @@ impl Figure for Figure1 {
 
         Ok(())
     }
-
-    fn is_active(&self) -> bool {
-        self.canvas.has_focus()
-    }
 }
