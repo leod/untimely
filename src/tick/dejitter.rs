@@ -29,6 +29,8 @@ impl<T> DejitterBuffer<T> {
             return;
         }
 
+        self.time_samples.record(receive_time, receive_num.to_tick_time());
+
         match self
             .buffer
             .binary_search_by_key(&receive_num, |(tick_num, _)| *tick_num)
