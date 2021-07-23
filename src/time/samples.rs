@@ -1,33 +1,32 @@
 use std::collections::VecDeque;
 
-use super::{Time, TimeTag};
+use super::{LocalClock, LocalDt, LocalTime};
 
 #[derive(Debug, Clone)]
-pub struct Samples<Tag, Value> {
-    samples: VecDeque<(Time<Tag>, Value)>,
+pub struct Samples<Value> {
+    max_age: LocalDt,
+    clock: LocalClock,
+    samples: VecDeque<(LocalTime, Value)>,
 }
 
-impl<Tag, Value> Default for Samples<Tag, Value> {
-    fn default() -> Self {
+impl<Value> Samples<Value> {
+    pub fn new(max_age: LocalDt, clock: LocalClock) -> Self {
         Self {
+            max_age,
+            clock,
             samples: VecDeque::new(),
         }
     }
-}
 
-impl<Tag, Value> Samples<Tag, Value>
-where
-    Tag: TimeTag,
-{
-    pub fn new() -> Self {
-        Self::default()
+    pub fn set_max_age(&mut self, max_age: LocalDt) {
+        self.max_age = max_age;
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (Time<Tag>, &Value)> {
+    pub fn iter(&self) -> impl Iterator<Item = (LocalTime, &Value)> {
         self.samples.iter().map(|(time, value)| (*time, value))
     }
 
-    pub fn times(&self) -> impl Iterator<Item = Time<Tag>> + '_ {
+    pub fn times(&self) -> impl Iterator<Item = LocalTime> + '_ {
         self.samples.iter().map(|(time, _)| *time)
     }
 
@@ -35,11 +34,11 @@ where
         self.samples.iter().map(|(_, value)| value)
     }
 
-    pub fn front(&self) -> Option<&(Time<Tag>, Value)> {
+    pub fn front(&self) -> Option<&(LocalTime, Value)> {
         self.samples.front()
     }
 
-    pub fn back(&self) -> Option<&(Time<Tag>, Value)> {
+    pub fn back(&self) -> Option<&(LocalTime, Value)> {
         self.samples.back()
     }
 
@@ -47,11 +46,12 @@ where
         self.samples.len()
     }
 
-    pub fn record_sample(&mut self, time: Time<Tag>, value: Value) {
-        self.samples.push_back((time, value));
-    }
+    pub fn record(&mut self, sample_time: LocalTime, sample_value: Value) {
+        let local_time = self.clock.local_time();
+        let max_age = self.max_age;
 
-    pub fn retain_recent_samples(&mut self, min_time: Time<Tag>) {
-        self.samples.retain(|&(time, _)| time > min_time);
+        self.samples.push_back((sample_time, sample_value));
+        self.samples
+            .retain(|&(time, _)| local_time - time <= max_age);
     }
 }

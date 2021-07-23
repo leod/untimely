@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
-use crate::{time::LocalTag, LocalDt, LocalTime, Samples};
+use crate::{LocalClock, LocalDt, LocalTime, Samples};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Gauge {
-    samples: Samples<LocalTag, f64>,
+    samples: Samples<f64>,
 }
 
 impl Gauge {
@@ -56,30 +56,16 @@ impl Gauge {
 #[derive(Debug, Clone)]
 pub struct Metrics {
     max_sample_age: LocalDt,
-    time: LocalTime,
+    clock: LocalClock,
     gauges: BTreeMap<String, Gauge>,
 }
 
 impl Metrics {
-    pub fn new(max_sample_age: LocalDt) -> Self {
+    pub fn new(max_sample_age: LocalDt, clock: LocalClock) -> Self {
         Self {
             max_sample_age,
-            time: LocalTime::zero(),
+            clock,
             gauges: BTreeMap::new(),
-        }
-    }
-
-    pub fn time(&self) -> LocalTime {
-        self.time
-    }
-
-    pub fn advance(&mut self, dt: LocalDt) {
-        self.time += dt;
-
-        for gauge in self.gauges.values_mut() {
-            gauge
-                .samples
-                .retain_recent_samples(self.time - self.max_sample_age);
         }
     }
 
@@ -88,9 +74,14 @@ impl Metrics {
     }
 
     pub fn gauge_mut(&mut self, name: &str) -> &mut Gauge {
+        let max_sample_age = self.max_sample_age;
+        let clock = self.clock.clone();
+
         self.gauges
             .entry(name.to_string())
-            .or_insert(Gauge::default())
+            .or_insert_with(|| Gauge {
+                samples: Samples::new(max_sample_age, clock),
+            })
     }
 
     pub fn get_gauge(&self, name: &str) -> Option<&Gauge> {
@@ -98,7 +89,7 @@ impl Metrics {
     }
 
     pub fn record_gauge(&mut self, name: &str, value: f64) {
-        let time = self.time;
-        self.gauge_mut(name).samples.record_sample(time, value);
+        let time = self.clock.local_time();
+        self.gauge_mut(name).samples.record(time, value);
     }
 }

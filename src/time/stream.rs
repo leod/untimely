@@ -1,11 +1,10 @@
-use super::{Samples, Time, TimeTag};
+use super::{LocalTime, Samples, Time, TimeTag};
 
-pub fn predict_stream_time<InputTag, StreamTag>(
-    stream_samples: &Samples<InputTag, Time<StreamTag>>,
-    current_input_time: Time<InputTag>,
+pub fn predict_stream_time<StreamTag>(
+    stream_samples: &Samples<Time<StreamTag>>,
+    current_local_time: LocalTime,
 ) -> Option<Time<StreamTag>>
 where
-    InputTag: TimeTag,
     StreamTag: TimeTag,
 {
     if stream_samples.len() < 2 {
@@ -14,7 +13,7 @@ where
 
     let time_pairs: Vec<(f64, f64)> = stream_samples
         .iter()
-        .map(|(source_time, stream_time)| (source_time.to_secs(), stream_time.to_secs()))
+        .map(|(local_time, stream_time)| (local_time.to_secs(), stream_time.to_secs()))
         .collect();
     let time_pairs = pareen::slice(&time_pairs);
 
@@ -22,6 +21,6 @@ where
     let regression_line = pareen::simple_linear_regression_with_slope(slope, time_pairs);
 
     Some(Time::from_secs(
-        regression_line.eval(current_input_time.to_secs()),
+        regression_line.eval(current_local_time.to_secs()),
     ))
 }

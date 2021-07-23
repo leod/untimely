@@ -1,3 +1,3 @@
 mod num;
 
-pub use num::TickNum;
+pub use num::{TickNum, TickTime};

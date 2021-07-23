@@ -3,7 +3,9 @@ use malen::{
     Canvas, Color4, InputState,
 };
 use nalgebra::{Matrix3, Vector2};
-use untimely::{mock::MockNet, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum};
+use untimely::{
+    mock::MockNet, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum,
+};
 
 use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameInput, GameParams};
 
@@ -29,6 +31,8 @@ struct Client {
 }
 
 pub struct Figure2 {
+    clock: LocalClock,
+
     server: Server,
     clients: Vec<Client>,
     mock_net: MockNet<ServerMsg, ClientMsg>,
@@ -113,15 +117,18 @@ impl Client {
 
 impl Figure2 {
     pub fn new() -> Result<Self, malen::Error> {
+        let clock = LocalClock::new();
+
         let canvas = Canvas::from_element_id("figure2")?;
         let draw_game = DrawGame::new(&canvas)?;
         let plotting = Plotting::new(&canvas)?;
 
         Ok(Self {
+            clock: clock.clone(),
             server: Server::new(),
             clients: vec![Client::new(0), Client::new(1)],
-            mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)]),
-            metrics: Metrics::new(LocalDt::from_secs(5.0)),
+            mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)], clock.clone()),
+            metrics: Metrics::new(LocalDt::from_secs(5.0), clock.clone()),
             canvas,
             draw_game,
             plotting,
@@ -130,10 +137,11 @@ impl Figure2 {
 }
 
 impl Figure for Figure2 {
-    fn update(&mut self, time: LocalTime, dt: LocalDt) {
+    fn update(&mut self, time: LocalTime) {
         while let Some(_) = self.canvas.pop_event() {}
 
-        self.mock_net.set_time(time);
+        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
+
         self.mock_net
             .set_params(PlayerId(0), get_socket_params("figure2", "anna"));
         //self.mock_net.set_params(PlayerId(1), get_socket_params("figure2", "brad"));
@@ -144,7 +152,6 @@ impl Figure for Figure2 {
         }
 
         // Record metrics for visualization.
-        self.metrics.advance(dt);
         let time_anna = self.clients[0].latest_server_game.time.to_secs();
         let time_brad = self.clients[1].latest_server_game.time.to_secs();
         let time_server = self.server.game.time.to_secs();
@@ -199,7 +206,7 @@ impl Figure2 {
         let shift = |points: &[(f64, f64)]| {
             points
                 .iter()
-                .map(|(x, y)| (*x - self.metrics.time().to_secs(), *y))
+                .map(|(x, y)| (*x - self.clock.local_time().to_secs(), *y))
                 .collect::<Vec<_>>()
         };
 

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{LocalTime, PlayerId};
+use crate::{LocalClock, LocalTime, PlayerId};
 
 use super::{MockChannel, MockChannelParams};
 
@@ -28,12 +28,12 @@ pub struct MockSocket<S, C> {
 
 #[derive(Clone)]
 pub struct MockNet<S, C> {
-    time: LocalTime,
+    clock: LocalClock,
     sockets: BTreeMap<PlayerId, MockSocket<S, C>>,
 }
 
 impl<S, C> MockNet<S, C> {
-    pub fn new(players: &[PlayerId]) -> Self {
+    pub fn new(players: &[PlayerId], clock: LocalClock) -> Self {
         let sockets = players
             .iter()
             .map(|player| {
@@ -48,14 +48,7 @@ impl<S, C> MockNet<S, C> {
             })
             .collect();
 
-        MockNet {
-            time: LocalTime::zero(),
-            sockets,
-        }
-    }
-
-    pub fn set_time(&mut self, time: LocalTime) {
-        self.time = time;
+        MockNet { clock, sockets }
     }
 
     fn socket_mut(&mut self, player: PlayerId) -> &mut MockSocket<S, C> {
@@ -67,7 +60,7 @@ impl<S, C> MockNet<S, C> {
     }
 
     pub fn send_to_server(&mut self, sender: PlayerId, message: C) {
-        let time = self.time;
+        let time = self.clock.local_time();
         let socket = self.socket_mut(sender);
         socket
             .client_out
@@ -75,7 +68,7 @@ impl<S, C> MockNet<S, C> {
     }
 
     pub fn send_to_client(&mut self, receiver: PlayerId, message: S) {
-        let time = self.time;
+        let time = self.clock.local_time();
         let socket = self.socket_mut(receiver);
         socket
             .server_out
@@ -83,7 +76,7 @@ impl<S, C> MockNet<S, C> {
     }
 
     pub fn receive_client(&mut self, receiver: PlayerId) -> Vec<(LocalTime, S)> {
-        let time = self.time;
+        let time = self.clock.local_time();
         let socket = self.socket_mut(receiver);
         let mut messages = Vec::new();
         while let Some(message) = socket.server_out.receive(time) {
@@ -96,7 +89,9 @@ impl<S, C> MockNet<S, C> {
     pub fn receive_server(&mut self) -> Vec<(LocalTime, PlayerId, C)> {
         let mut messages = Vec::new();
         for (sender, socket) in self.sockets.iter_mut() {
-            while let Some((receive_time, message)) = socket.client_out.receive(self.time) {
+            while let Some((receive_time, message)) =
+                socket.client_out.receive(self.clock.local_time())
+            {
                 messages.push((receive_time, *sender, message));
             }
         }

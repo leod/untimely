@@ -4,7 +4,7 @@ use super::{LocalDt, LocalTime};
 
 #[derive(Debug, Clone)]
 pub struct LocalClock {
-    time: Rc<Cell<LocalTime>>,
+    local_time: Rc<Cell<LocalTime>>,
 }
 
 impl LocalClock {
@@ -12,18 +12,13 @@ impl LocalClock {
         LocalClock::default()
     }
 
-    pub fn get(&self) -> LocalTime {
-        self.time.get()
+    pub fn local_time(&self) -> LocalTime {
+        self.local_time.get()
     }
 
-    pub fn set(&mut self, time: LocalTime) -> LocalDt {
-        let dt = if time < self.time.get() {
-            LocalDt::zero()
-        } else {
-            self.time.get() - time
-        };
-
-        self.time.set(time);
+    pub fn set_local_time(&mut self, new_local_time: LocalTime) -> LocalDt {
+        let dt = (new_local_time - self.local_time.get()).max(LocalDt::zero());
+        self.local_time.set(new_local_time);
 
         dt
     }
@@ -32,7 +27,7 @@ impl LocalClock {
 impl Default for LocalClock {
     fn default() -> Self {
         Self {
-            time: Rc::new(Cell::new(LocalTime::zero())),
+            local_time: Rc::new(Cell::new(LocalTime::zero())),
         }
     }
 }

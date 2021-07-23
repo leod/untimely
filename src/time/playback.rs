@@ -1,4 +1,4 @@
-use super::{predict_stream_time, GameDt, GameTime, LocalDt, LocalTag, LocalTime, Samples};
+use super::{predict_stream_time, GameDt, GameTime, LocalClock, LocalDt, LocalTime, Samples};
 
 pub fn time_warp(residual: GameDt) -> f64 {
     0.5 + (2.0 - 0.5) / (1.0 + 2.0 * (-residual.to_secs() / 0.005).exp())
@@ -12,17 +12,19 @@ pub struct PlaybackParams {
 
 pub struct PlaybackClock {
     pub params: PlaybackParams,
-
-    stream_samples: Samples<LocalTag, GameTime>,
-
+    clock: LocalClock,
+    stream_samples: Samples<GameTime>,
     playback_time: GameTime,
 }
 
 impl PlaybackClock {
-    pub fn new(params: PlaybackParams) -> Self {
-        PlaybackClock {
+    pub fn new(params: PlaybackParams, clock: LocalClock) -> Self {
+        let stream_samples = Samples::new(LocalDt::from_secs(1.0), clock.clone());
+
+        Self {
             params,
-            stream_samples: Samples::new(),
+            clock,
+            stream_samples,
             playback_time: GameTime::zero(),
         }
     }
@@ -31,15 +33,13 @@ impl PlaybackClock {
         self.playback_time
     }
 
-    pub fn record_stream_sample(&mut self, arrival_time: LocalTime, stream_time: GameTime) {
-        self.stream_samples.record_sample(arrival_time, stream_time);
-        self.stream_samples
-            .retain_recent_samples(arrival_time - self.params.max_sample_age);
+    pub fn record_stream_time(&mut self, receive_time: LocalTime, stream_time: GameTime) {
+        self.stream_samples.record(receive_time, stream_time);
     }
 
-    pub fn advance(&mut self, time: LocalTime, dt: LocalDt) {
-        let stream_time =
-            predict_stream_time(&self.stream_samples, time).unwrap_or(GameTime::zero());
+    pub fn advance(&mut self, dt: LocalDt) {
+        let stream_time = predict_stream_time(&self.stream_samples, self.clock.local_time())
+            .unwrap_or(GameTime::zero());
         let target_time = stream_time - self.params.delay;
         let residual = target_time - self.playback_time;
         let max_stream_time = self
