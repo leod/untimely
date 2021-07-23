@@ -73,6 +73,36 @@
         <canvas id="figure2" width="990" height="455"></canvas>
       </figure>
 
+      <h3>Client-Server</h3>
+      <p>
+        On top of the client-server architecture from the previous section, clients now interpolate
+        between successive authorative states, making the state playback much smoother.
+      </p>
+
+      <figure class="figure">
+        <figcaption class="figure-caption">
+          Figure 3
+          <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure3.rs">[src]</a>:
+          Client-side state interpolation.
+        </figcaption>
+
+        <div>
+          <input type="range" min="0"
+                value="50"
+                max="200"
+                class="slider"
+                id="figure3_anna_ping"
+                onchange="this.nextElementSibling.value = this.value">
+          <output id="figure3_anna_ping_output">50</output>
+        </div>
+        <script type="text/javascript">
+          document.getElementById("figure3_anna_ping_output").value
+              = document.getElementById("figure3_anna_ping").value;
+        </script>
+
+        <canvas id="figure3" width="990" height="455"></canvas>
+      </figure>
+
       <h2>References</h2>
     </div>
 

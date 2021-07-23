@@ -6,7 +6,7 @@ mod input;
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use untimely::{LocalClock, LocalDt, LocalTime};
+use untimely::LocalTime;
 
 pub use draw::DrawGame;
 pub use figure::Figure;
