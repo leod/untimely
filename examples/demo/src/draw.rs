@@ -98,7 +98,7 @@ impl DrawGame {
         let view = Camera::screen_view_matrix(&canvas.screen());
         let transform = canvas.screen().orthographic_projection() * view;
 
-        canvas.clear(Color4::new(1.0, 1.0, 1.0, 1.0));
+        canvas.clear(Color4::from_u8(248, 249, 250, 255));
         self.shadow_map
             .build(canvas, &view, &self.lights)?
             .draw_occluders(&self.occluder_batch.draw_unit())?

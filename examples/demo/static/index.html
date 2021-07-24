@@ -12,7 +12,7 @@
   <body>
     <div class="container">
       <h1>Exploring Network Synchronization</h1>
-      <p>
+      <p class="lead">
         This webpage explores commonly used client-server architectures for network multiplayer
         games. Due to the involvement of time, and time differences, it can be difficult to imagine
         the behavior of such architectures. We hope that our interactive figures can provide some
@@ -49,29 +49,45 @@
         Clients act as "dumb terminals": they display received state as soon as it arrives.
       </p>
 
-      <figure class="figure">
-        <figcaption class="figure-caption">
-          Figure 2
-          <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure2.rs">[src]</a>:
-          Authorative server and "dumb terminal" clients.
-        </figcaption>
+        <figure class="figure m-4">
+          <div class="p-4 bg-light border rounded-3">
+            <div class="container">
+              <div class="row">
+                <div class="col-sm p-0 m-0">
+                  <input type="range" min="0"
+                        value="50"
+                        max="200"
+                        class="slider"
+                        id="figure2_anna_ping"
+                        onchange="this.nextElementSibling.value = this.value">
+                  <output id="figure2_anna_ping_output">50</output>
+                </div>
 
-        <div>
-          <input type="range" min="0"
-                value="50"
-                max="200"
-                class="slider"
-                id="figure2_anna_ping"
-                onchange="this.nextElementSibling.value = this.value">
-          <output id="figure2_anna_ping_output">50</output>
-        </div>
-        <script type="text/javascript">
-          document.getElementById("figure2_anna_ping_output").value
-              = document.getElementById("figure2_anna_ping").value;
-        </script>
+                <div class="col-sm pl-45">
+                  One of three columns
+                </div>
 
-        <canvas id="figure2" width="990" height="455"></canvas>
-      </figure>
+                <div class="col-sm">
+                  One of three columns
+                </div>
+              </div>
+            </div>
+
+            <canvas id="figure2" width="990" height="455"></canvas>
+          </div>
+
+          <figcaption class="figure-caption mb-1">
+            <strong>
+                Figure 2 <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure2.rs">[src]</a>:
+                Authorative server and "dumb terminal" clients.
+            </strong>
+          </figcaption>
+        </figure>
+
+      <script type="text/javascript">
+        document.getElementById("figure2_anna_ping_output").value
+            = document.getElementById("figure2_anna_ping").value;
+      </script>
 
       <h3>Client-Server</h3>
       <p>
