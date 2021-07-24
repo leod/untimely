@@ -4,15 +4,18 @@ use malen::{
         ColPass, ColVertex, Font, Light, LineBatch, OccluderBatch, ShadowColPass, ShadowMap,
         TextBatch, TriBatch,
     },
-    AxisRect, Camera, Canvas, Color3, Color4,
+    AxisRect, Camera, Canvas, Color3, Color4, InputState,
 };
-use nalgebra::{Matrix3, Point2, Point3, Vector2};
+use nalgebra::{Point2, Point3, Vector2};
 
 use untimely::{LocalTime, Metrics, PlayerId};
 
 use crate::game::{Game, GameInput, Player, Wall};
 
-pub struct DrawGame {
+struct GameInstance {
+    canvas: Canvas,
+    name: String,
+
     font: Font,
 
     occluder_batch: OccluderBatch,
@@ -26,39 +29,58 @@ pub struct DrawGame {
     shadow_col_pass: ShadowColPass,
 
     shadow_map: ShadowMap,
+}
 
+struct PlotInstance {
+    canvas: Canvas,
+    font: Font,
+    div_id: String,
     plotting: Plotting,
 }
 
-impl DrawGame {
-    pub fn new(canvas: &Canvas) -> Result<Self, malen::Error> {
-        Ok(Self {
-            font: Font::from_bytes(
-                canvas,
-                include_bytes!("../resources/Roboto-Regular.ttf").to_vec(),
-                40.0,
-            )?,
-            occluder_batch: OccluderBatch::new(canvas)?,
-            shadowed_tri_col_batch: TriBatch::new(canvas)?,
-            plain_tri_col_batch: TriBatch::new(canvas)?,
-            line_col_batch: LineBatch::new(canvas)?,
-            text_batch: TextBatch::new(canvas)?,
-            col_pass: ColPass::new(canvas)?,
-            lights: Vec::new(),
-            shadow_col_pass: ShadowColPass::new(canvas)?,
-            shadow_map: ShadowMap::new(canvas, 512, 32)?,
-            plotting: Plotting::new(canvas)?,
-        })
-    }
+pub struct DrawGame {
+    games: Vec<GameInstance>,
+    plots: Vec<PlotInstance>,
+}
 
-    pub fn font_mut(&mut self) -> &mut Font {
-        &mut self.font
+impl GameInstance {
+    pub fn new(canvas: Canvas, name: String) -> Result<Self, malen::Error> {
+        let font = Font::from_bytes(
+            &canvas,
+            include_bytes!("../resources/Roboto-Regular.ttf").to_vec(),
+            40.0,
+        )?;
+        let occluder_batch = OccluderBatch::new(&canvas)?;
+        let shadowed_tri_col_batch = TriBatch::new(&canvas)?;
+        let plain_tri_col_batch = TriBatch::new(&canvas)?;
+        let line_col_batch = LineBatch::new(&canvas)?;
+        let text_batch = TextBatch::new(&canvas)?;
+        let col_pass = ColPass::new(&canvas)?;
+        let lights = Vec::new();
+        let shadow_col_pass = ShadowColPass::new(&canvas)?;
+        let shadow_map = ShadowMap::new(&canvas, 512, 32)?;
+
+        Ok(Self {
+            name,
+            canvas,
+            font,
+            occluder_batch,
+            shadowed_tri_col_batch,
+            plain_tri_col_batch,
+            line_col_batch,
+            text_batch,
+            col_pass,
+            lights,
+            shadow_col_pass,
+            shadow_map,
+        })
     }
 
     pub fn draw(
         &mut self,
-        canvas: &Canvas,
-        games: &[(&str, Option<&Game>, Option<GameInput>, Option<GameInput>)],
+        game: Option<&Game>,
+        input1: Option<GameInput>,
+        input2: Option<GameInput>,
     ) -> Result<(), malen::Error> {
         self.occluder_batch.clear();
         self.shadowed_tri_col_batch.clear();
@@ -67,40 +89,29 @@ impl DrawGame {
         self.text_batch.clear();
         self.lights.clear();
 
-        {
-            let padding = 15.0;
-            let mut x_start = 0.0;
-
-            for (name, game, input1, input2) in games.iter() {
-                if let Some(game) = game {
-                    self.render_game(game, Vector2::new(x_start, 0.0));
-                }
-
-                self.font.write(
-                    20.0,
-                    Point3::new(x_start + 10.0, 7.5, 0.0),
-                    //Color4::new(1.0, 0.0, 0.0, 1.0),
-                    Color4::new(1.0, 1.0, 1.0, 1.0),
-                    name,
-                    &mut self.text_batch,
-                );
-                if let Some(input1) = input1.as_ref() {
-                    self.render_input(input1, Vector2::new(x_start + 10.0, 32.5));
-                }
-                if let Some(input2) = input2.as_ref() {
-                    self.render_input(input2, Vector2::new(x_start + 10.0, 51.25));
-                }
-
-                x_start += Game::MAP_WIDTH + padding;
-            }
+        if let Some(game) = game {
+            self.render_game(game, Vector2::new(0.0, 0.0));
         }
 
-        let view = Camera::screen_view_matrix(&canvas.screen());
-        let transform = canvas.screen().orthographic_projection() * view;
+        self.font.write(
+            20.0,
+            Point3::new(0.0 + 10.0, 7.5, 0.0),
+            Color4::new(1.0, 1.0, 1.0, 1.0),
+            &self.name,
+            &mut self.text_batch,
+        );
+        if let Some(input1) = input1.as_ref() {
+            self.render_input(input1, Vector2::new(10.0, 32.5));
+        }
+        if let Some(input2) = input2.as_ref() {
+            self.render_input(input2, Vector2::new(10.0, 51.25));
+        }
 
-        canvas.clear(Color4::from_u8(248, 249, 250, 255));
+        let view = Camera::screen_view_matrix(&self.canvas.screen());
+        let transform = self.canvas.screen().orthographic_projection() * view;
+
         self.shadow_map
-            .build(canvas, &view, &self.lights)?
+            .build(&self.canvas, &view, &self.lights)?
             .draw_occluders(&self.occluder_batch.draw_unit())?
             .finish()?;
         self.shadow_col_pass.draw(
@@ -114,23 +125,9 @@ impl DrawGame {
         self.col_pass
             .draw(&transform, &self.line_col_batch.draw_unit())?;
         self.font
-            .draw(canvas, &transform, &self.text_batch.draw_unit())?;
+            .draw(&self.canvas, &transform, &self.text_batch.draw_unit())?;
 
         Ok(())
-    }
-
-    pub fn draw_plot(
-        &mut self,
-        canvas: &Canvas,
-        max_time: LocalTime,
-        metrics: &Metrics,
-    ) -> Result<(), malen::Error> {
-        let transform = canvas.screen().orthographic_projection()
-            * Matrix3::new_translation(&Vector2::new(0.0, Game::MAP_HEIGHT + 15.0));
-
-        let plot = self.metrics_plot(max_time, metrics);
-        self.plotting
-            .draw(canvas, &mut self.font, &transform, &plot)
     }
 
     fn render_game(&mut self, game: &Game, offset: Vector2<f32>) {
@@ -233,6 +230,45 @@ impl DrawGame {
             Color4::new(0.8, 0.8, 0.8, 1.0),
         );
     }
+}
+
+impl PlotInstance {
+    pub fn new(canvas: Canvas, div_id: String) -> Result<Self, malen::Error> {
+        let font = Font::from_bytes(
+            &canvas,
+            include_bytes!("../resources/Roboto-Regular.ttf").to_vec(),
+            40.0,
+        )?;
+        let plotting = Plotting::new(&canvas)?;
+
+        Ok(Self {
+            canvas,
+            div_id,
+            font,
+            plotting,
+        })
+    }
+
+    pub fn draw_plot(
+        &mut self,
+        max_time: LocalTime,
+        metrics: &Metrics,
+    ) -> Result<(), malen::Error> {
+        // Auto-resize to size of parent div:
+        {
+            let window = web_sys::window().unwrap();
+            let document = window.document().unwrap();
+            let element = document.get_element_by_id(&self.div_id).unwrap();
+
+            self.canvas
+                .resize(Vector2::new(element.client_width() as u32, 200));
+        }
+
+        let transform = self.canvas.screen().orthographic_projection();
+        let plot = self.metrics_plot(max_time, metrics);
+        self.plotting
+            .draw(&self.canvas, &mut self.font, &transform, &plot)
+    }
 
     fn metrics_plot(&self, max_time: LocalTime, metrics: &Metrics) -> Plot {
         let mut lines = Vec::new();
@@ -244,16 +280,16 @@ impl DrawGame {
                 .collect::<Vec<_>>()
         };
 
-        if let Some(gauge) = metrics.get_gauge("anna_server_delay") {
+        if let Some(gauge) = metrics.get_gauge("anja_server_delay") {
             lines.push(Line {
-                caption: "delay anna to server".to_string(),
+                caption: "delay anja to server".to_string(),
                 color: Color4::new(0.2, 0.8, 0.2, 1.0),
                 points: shift(&gauge.plot_points()),
             });
         }
-        if let Some(gauge) = metrics.get_gauge("anna_stream_delay") {
+        if let Some(gauge) = metrics.get_gauge("anja_stream_delay") {
             lines.push(Line {
-                caption: "delay anna to stream".to_string(),
+                caption: "delay anja to stream".to_string(),
                 color: Color4::new(0.8, 0.8, 0.2, 1.0),
                 points: shift(&gauge.plot_points()),
             });
@@ -272,9 +308,9 @@ impl DrawGame {
                 points: shift(&gauge.plot_points()),
             });
         }
-        /*if let Some(gauge) = metrics.get_gauge("anna_stream_server_delay") {
+        /*if let Some(gauge) = metrics.get_gauge("anja_stream_server_delay") {
             lines.push(Line {
-                caption: "anna_stream_server_delay".to_string(),
+                caption: "anja_stream_server_delay".to_string(),
                 color: Color4::new(0.8, 0.0, 0.8, 1.0),
                 points: shift(&gauge.plot_points()),
             });
@@ -288,7 +324,7 @@ impl DrawGame {
         }*/
 
         Plot {
-            size: Vector2::new(990.0, 200.0),
+            size: nalgebra::convert(self.canvas.screen().logical_size),
             x_axis: Axis {
                 label: "local time [s]".to_string(),
                 range: Some((-5.0, 0.0)),
@@ -306,5 +342,65 @@ impl DrawGame {
             text_color: Color4::new(0.0, 0.0, 0.0, 1.0),
             lines,
         }
+    }
+}
+
+impl DrawGame {
+    pub fn new(
+        game_canvas_ids: &[(&str, &str)],
+        plot_canvas_ids: &[(&str, &str)],
+    ) -> Result<Self, malen::Error> {
+        let games = game_canvas_ids
+            .iter()
+            .map(|(id, name)| {
+                let canvas = Canvas::from_element_id(id)?;
+                GameInstance::new(canvas, name.to_string())
+            })
+            .collect::<Result<Vec<GameInstance>, _>>()?;
+
+        let plots = plot_canvas_ids
+            .iter()
+            .map(|(id, div_id)| {
+                let canvas = Canvas::from_element_id(id)?;
+                PlotInstance::new(canvas, div_id.to_string())
+            })
+            .collect::<Result<Vec<PlotInstance>, _>>()?;
+
+        Ok(Self { games, plots })
+    }
+
+    pub fn update(&mut self) {
+        let canvasses = self
+            .games
+            .iter_mut()
+            .map(|game| &mut game.canvas)
+            .chain(self.plots.iter_mut().map(|plot| &mut plot.canvas));
+
+        for canvas in canvasses {
+            while let Some(_) = canvas.pop_event() {}
+        }
+    }
+
+    pub fn draw(
+        &mut self,
+        games: &[(Option<&Game>, Option<GameInput>, Option<GameInput>)],
+    ) -> Result<(), malen::Error> {
+        for (instance, (game, input1, input2)) in self.games.iter_mut().zip(games.iter()) {
+            instance.draw(*game, input1.clone(), input2.clone())?;
+        }
+
+        Ok(())
+    }
+
+    pub fn draw_plot(
+        &mut self,
+        max_time: LocalTime,
+        metrics: &Metrics,
+    ) -> Result<(), malen::Error> {
+        self.plots[0].draw_plot(max_time, metrics)
+    }
+
+    pub fn input_state(&self, game_index: usize) -> &InputState {
+        self.games[game_index].canvas.input_state()
     }
 }

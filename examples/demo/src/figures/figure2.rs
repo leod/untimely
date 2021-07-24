@@ -1,4 +1,4 @@
-use malen::{Canvas, InputState};
+use malen::InputState;
 use untimely::{
     mock::MockNet, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum,
 };
@@ -108,7 +108,6 @@ pub struct Figure2 {
     mock_net: MockNet<ServerMsg, ClientMsg>,
 
     metrics: Metrics,
-    canvas: Canvas,
     draw_game: DrawGame,
 }
 
@@ -116,8 +115,12 @@ impl Figure2 {
     pub fn new() -> Result<Self, malen::Error> {
         let clock = LocalClock::new();
 
-        let canvas = Canvas::from_element_id("figure2")?;
-        let draw_game = DrawGame::new(&canvas)?;
+        let instances = &[
+            ("figure2_anja", "Anja"),
+            ("figure2_brad", "Brad"),
+            ("figure2_server", "Server"),
+        ];
+        let draw_game = DrawGame::new(instances, &[("figure2_plot", "figure2_plot_div")])?;
 
         Ok(Self {
             clock: clock.clone(),
@@ -125,7 +128,6 @@ impl Figure2 {
             users: vec![User::new(0), User::new(1)],
             mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)], clock.clone()),
             metrics: Metrics::new(LocalDt::from_secs(5.0), clock.clone()),
-            canvas,
             draw_game,
         })
     }
@@ -133,17 +135,15 @@ impl Figure2 {
 
 impl Figure for Figure2 {
     fn update(&mut self, time: LocalTime) {
-        while let Some(_) = self.canvas.pop_event() {}
-
-        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
-
+        self.draw_game.update();
         self.mock_net
-            .set_params(PlayerId(0), get_socket_params("figure2", "anna"));
+            .set_params(PlayerId(0), get_socket_params("figure2", "anja"));
         //self.mock_net.set_params(PlayerId(1), get_socket_params("figure2", "brad"));
 
+        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
         self.server.update(dt, &mut self.mock_net);
         for client in &mut self.users {
-            client.update(dt, self.canvas.input_state(), &mut self.mock_net);
+            client.update(dt, self.draw_game.input_state(0), &mut self.mock_net);
         }
 
         // Record metrics for visualization.
@@ -151,41 +151,32 @@ impl Figure for Figure2 {
         let time_brad = self.users[1].latest_server_game.time.to_secs();
         let time_server = self.server.game.time.to_secs();
         self.metrics
-            .record_gauge("anna_server_delay", time_server - time_anna);
+            .record_gauge("anja_server_delay", time_server - time_anna);
         self.metrics
             .record_gauge("brad_server_delay", time_server - time_brad);
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        let anna = &self.users[0];
-        let brad = &self.users[1];
-        let serv = &self.server;
-
-        self.draw_game.draw(
-            &self.canvas,
-            &[
-                (
-                    "Anna",
-                    Some(&anna.latest_server_game),
-                    Some(anna.last_input.clone()),
-                    None,
-                ),
-                (
-                    "Brad",
-                    Some(&brad.latest_server_game),
-                    Some(brad.last_input.clone()),
-                    None,
-                ),
-                (
-                    "Server",
-                    Some(&serv.game),
-                    Some(serv.last_inputs[0].clone()),
-                    Some(serv.last_inputs[1].clone()),
-                ),
-            ],
-        )?;
+        let games = &[
+            (
+                Some(&self.users[0].latest_server_game),
+                Some(self.users[0].last_input.clone()),
+                None,
+            ),
+            (
+                Some(&self.users[1].latest_server_game),
+                Some(self.users[1].last_input.clone()),
+                None,
+            ),
+            (
+                Some(&self.server.game),
+                Some(self.server.last_inputs[0].clone()),
+                Some(self.server.last_inputs[1].clone()),
+            ),
+        ];
+        self.draw_game.draw(games)?;
         self.draw_game
-            .draw_plot(&self.canvas, self.clock.local_time(), &self.metrics)?;
+            .draw_plot(self.clock.local_time(), &self.metrics)?;
 
         Ok(())
     }

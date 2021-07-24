@@ -1,4 +1,4 @@
-use malen::{Canvas, InputState};
+use malen::InputState;
 use untimely::{
     mock::MockNet, DejitterBuffer, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer,
     PlaybackClockParams, PlayerId, TickNum, TickPlayback,
@@ -154,7 +154,6 @@ pub struct Figure3 {
     mock_net: MockNet<ServerMsg, ClientMsg>,
 
     metrics: Metrics,
-    canvas: Canvas,
     draw_game: DrawGame,
 }
 
@@ -162,19 +161,22 @@ impl Figure3 {
     pub fn new() -> Result<Self, malen::Error> {
         let clock = LocalClock::new();
 
-        let canvas = Canvas::from_element_id("figure3")?;
-        let draw_game = DrawGame::new(&canvas)?;
+        let instances = &[
+            ("figure3_anja", "Anja"),
+            ("figure3_brad", "Brad"),
+            ("figure3_server", "Server"),
+        ];
+        let draw_game = DrawGame::new(instances, &[("figure3_plot", "figure3_plot_div")])?;
 
         Ok(Self {
             clock: clock.clone(),
             server: Server::new(clock.clone()),
             users: vec![
-                User::new(0, "anna".to_string(), clock.clone()),
+                User::new(0, "anja".to_string(), clock.clone()),
                 User::new(1, "brad".to_string(), clock.clone()),
             ],
             mock_net: MockNet::new(&[PlayerId(0), PlayerId(1)], clock.clone()),
             metrics: Metrics::new(LocalDt::from_secs(5.0), clock.clone()),
-            canvas,
             draw_game,
         })
     }
@@ -201,52 +203,45 @@ impl Figure3 {
 
 impl Figure for Figure3 {
     fn update(&mut self, time: LocalTime) {
-        while let Some(_) = self.canvas.pop_event() {}
-
-        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
-
+        self.draw_game.update();
         self.mock_net
-            .set_params(PlayerId(0), get_socket_params("figure3", "anna"));
+            .set_params(PlayerId(0), get_socket_params("figure3", "anja"));
         //self.mock_net.set_params(PlayerId(1), get_socket_params("figure3", "brad"));
 
+        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
         self.server.update(dt, &mut self.mock_net);
         for client in &mut self.users {
-            client.update(dt, self.canvas.input_state(), &mut self.mock_net);
+            client.update(dt, self.draw_game.input_state(0), &mut self.mock_net);
         }
 
         self.record_metrics();
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        let anna = &self.users[0];
-        let brad = &self.users[1];
-        let serv = &self.server;
+        let anja_game = self.users[0].game();
+        let brad_game = self.users[0].game();
 
-        self.draw_game.draw(
-            &self.canvas,
-            &[
-                (
-                    "Anna",
-                    anna.game().as_ref(),
-                    Some(anna.last_input.clone()),
-                    None,
-                ),
-                (
-                    "Brad",
-                    brad.game().as_ref(),
-                    Some(brad.last_input.clone()),
-                    None,
-                ),
-                (
-                    "Server",
-                    Some(&serv.game),
-                    Some(serv.clients[0].last_input.clone()),
-                    Some(serv.clients[1].last_input.clone()),
-                ),
-            ],
-        )?;
+        let games = &[
+            (
+                anja_game.as_ref(),
+                Some(self.users[0].last_input.clone()),
+                None,
+            ),
+            (
+                brad_game.as_ref(),
+                Some(self.users[1].last_input.clone()),
+                None,
+            ),
+            (
+                Some(&self.server.game),
+                Some(self.server.clients[0].last_input.clone()),
+                Some(self.server.clients[1].last_input.clone()),
+            ),
+        ];
+
+        self.draw_game.draw(games)?;
         self.draw_game
-            .draw_plot(&self.canvas, self.clock.local_time(), &self.metrics)?;
+            .draw_plot(self.clock.local_time(), &self.metrics)?;
 
         Ok(())
     }
