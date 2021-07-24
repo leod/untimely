@@ -31,17 +31,23 @@
       <p>
         <strong>Controls:</strong> You control the green box, Anja. Press W/A/S/D for movement.
       </p>
-      <figure class="figure">
-        <figcaption class="figure-caption">
-          Figure 1
-          <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure1.rs">[src]</a>:
-          Local gameplay.
-        </figcaption>
 
-        <canvas id="figure1" width="320" height="240"></canvas>
-      </figure>
+      <div class="d-flex justify-content-center">
+        <figure class="figure">
+          <figcaption class="figure-caption mb-1">
+            <strong>
+                Figure 1 <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure1.rs">[src]</a>:
+                Local gameplay.
+            </strong>
+          </figcaption>
 
-      <h2>Client-Server</h2>
+          <div class="d-flex flex-column p-3 bg-light border rounded-3">
+            <canvas id="figure1" width="320" height="240"></canvas>
+          </div>
+        </figure>
+      </div>
+
+      <h2>Simple Client-Server</h2>
       <p>
         Clients periodically (60 Hz) send their game input to the server.
         In return, the server applies the received inputs and periodically (20 Hz) sends out the
@@ -49,35 +55,112 @@
         Clients act as "dumb terminals": they display received state as soon as it arrives.
       </p>
 
-      <figure class="figure">
-        <div class="p-3 bg-light border rounded-3">
+      <figure class="figure justify-content-md-center">
+        <figcaption class="figure-caption mb-1">
+          <strong>
+              Figure 2 <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure2.rs">[src]</a>:
+              Authorative server and "dumb terminal" clients.
+          </strong>
+        </figcaption>
+
+        <div class="d-flex flex-column p-3 bg-light border rounded-3">
           <div class="container">
             <div class="row">
-              <div class="col p-0 m-0">
+              <div class="col">
                 <canvas id="figure2_anja" width="320" height="240"></canvas>
+                <table class="table">
+                  <tbody>
+                    <tr>
+                      <th scope="row">Ping [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="50"
+                              max="800"
+                              class="slider"
+                              id="figure2_anja_ping"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure2_anja_ping_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Std. dev. [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="10"
+                              max="100"
+                              class="slider"
+                              id="figure2_anja_std"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure2_anja_std_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Loss [%]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="0"
+                              max="100"
+                              class="slider"
+                              id="figure2_anja_loss"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure2_anja_loss_output"></output>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <div class="col p-0 m-0">
+              <div class="col">
                 <canvas id="figure2_brad" width="320" height="240"></canvas>
+                <table class="table">
+                  <tbody>
+                    <tr>
+                      <th scope="row">Ping [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="50"
+                              max="800"
+                              class="slider"
+                              id="figure2_brad_ping"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure2_brad_ping_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Std. dev. [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="10"
+                              max="100"
+                              class="slider"
+                              id="figure2_brad_std"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure2_brad_std_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Loss [%]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="0"
+                              max="100"
+                              class="slider"
+                              id="figure2_brad_loss"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure2_brad_loss_output"></output>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <div class="col p-0 m-0">
+              <div class="col">
                 <canvas id="figure2_server" width="320" height="240"></canvas>
               </div>
-
-              <div class="w-100"></div>
-
-              <div class="col">
-                <input type="range" min="0"
-                      value="50"
-                      max="200"
-                      class="slider"
-                      id="figure2_anja_ping"
-                      onchange="this.nextElementSibling.value = this.value">
-                <output id="figure2_anja_ping_output">50</output>
-              </div>
-
-              <div class="col">Column</div>
-
-              <div class="col">Column</div>
             </div>
           </div>
 
@@ -87,52 +170,155 @@
             <canvas id="figure2_plot" style="width: 100%; display: inline" height="200"></canvas>
           </div>
         </div>
-
-        <figcaption class="figure-caption mb-1">
-          <strong>
-              Figure 2 <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure2.rs">[src]</a>:
-              Authorative server and "dumb terminal" clients.
-          </strong>
-        </figcaption>
       </figure>
 
-      <script type="text/javascript">
-        document.getElementById("figure2_anja_ping_output").value
-            = document.getElementById("figure2_anja_ping").value;
-      </script>
-
-      <h3>Client-Server</h3>
+      <h3>Client-Side Interpolation</h3>
       <p>
         On top of the client-server architecture from the previous section, clients now interpolate
         between successive authorative states, making the state playback much smoother.
       </p>
 
-      <figure class="figure">
-        <figcaption class="figure-caption">
-          Figure 3
-          <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure3.rs">[src]</a>:
-          Client-side state interpolation.
+      <figure class="figure justify-content-md-center">
+        <figcaption class="figure-caption mb-1">
+          <strong>
+            Figure 3
+            <a href="https://github.com/leod/untimely/blob/main/examples/demo/src/figures/figure3.rs">[src]</a>:
+            Client-side state interpolation.
+          </strong>
         </figcaption>
 
-        <div>
-          <input type="range" min="0"
-                value="50"
-                max="200"
-                class="slider"
-                id="figure3_anja_ping"
-                onchange="this.nextElementSibling.value = this.value">
-          <output id="figure3_anja_ping_output">50</output>
-        </div>
-        <script type="text/javascript">
-          document.getElementById("figure3_anja_ping_output").value
-              = document.getElementById("figure3_anja_ping").value;
-        </script>
+        <div class="d-flex flex-column p-3 bg-light border rounded-3">
+          <div class="container">
+            <div class="row">
+              <div class="col">
+                <canvas id="figure3_anja" width="320" height="240"></canvas>
+                <table class="table">
+                  <tbody>
+                    <tr>
+                      <th scope="row">Ping [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="50"
+                              max="800"
+                              class="slider"
+                              id="figure3_anja_ping"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure3_anja_ping_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Std. dev. [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="10"
+                              max="100"
+                              class="slider"
+                              id="figure3_anja_std"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure3_anja_std_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Loss [%]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="0"
+                              max="100"
+                              class="slider"
+                              id="figure3_anja_loss"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure3_anja_loss_output"></output>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="col">
+                <canvas id="figure3_brad" width="320" height="240"></canvas>
+                <table class="table">
+                  <tbody>
+                    <tr>
+                      <th scope="row">Ping [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="50"
+                              max="800"
+                              class="slider"
+                              id="figure3_brad_ping"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure3_brad_ping_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Std. dev. [ms]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="10"
+                              max="100"
+                              class="slider"
+                              id="figure3_brad_std"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure3_brad_std_output"></output>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Loss [%]</th>
+                      <td>
+                        <input type="range" min="0"
+                              value="0"
+                              max="100"
+                              class="slider"
+                              id="figure3_brad_loss"
+                              oninput="this.nextElementSibling.nextElementSibling.value = this.value">
+                        <br />
+                        <output id="figure3_brad_loss_output"></output>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="col">
+                <canvas id="figure3_server" width="320" height="240"></canvas>
+              </div>
+            </div>
+          </div>
 
-        <canvas id="figure3" width="990" height="455"></canvas>
+          <hr />
+
+          <div id="figure3_plot_div" style="width: 100%">
+            <canvas id="figure3_plot" style="width: 100%; display: inline" height="200"></canvas>
+          </div>
+        </div>
       </figure>
 
       <h2>References</h2>
     </div>
+
+    <script type="text/javascript">
+      elements = [
+        "figure2_anja_ping",
+        "figure2_anja_std",
+        "figure2_anja_loss",
+        "figure2_brad_ping",
+        "figure2_brad_std",
+        "figure2_brad_loss",
+        "figure3_anja_ping",
+        "figure3_anja_std",
+        "figure3_anja_loss",
+        "figure3_brad_ping",
+        "figure3_brad_std",
+        "figure3_brad_loss",
+      ];
+      for (element of elements) {
+        document.getElementById(element + "_output").value
+          = document.getElementById(element).value;
+      }
+    </script>
 
     <script src="./untimely_demo.js" type="module"></script>
     <script type="module">

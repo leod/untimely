@@ -138,7 +138,8 @@ impl Figure for Figure2 {
         self.draw_game.update();
         self.mock_net
             .set_params(PlayerId(0), get_socket_params("figure2", "anja"));
-        //self.mock_net.set_params(PlayerId(1), get_socket_params("figure2", "brad"));
+        self.mock_net
+            .set_params(PlayerId(1), get_socket_params("figure2", "brad"));
 
         let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
         self.server.update(dt, &mut self.mock_net);

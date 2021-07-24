@@ -52,12 +52,14 @@ pub fn get_param(element_id: &str) -> f64 {
 
 pub fn get_socket_params(prefix: &str, player: &str) -> MockSocketParams {
     let ping = LocalDt::from_millis(get_param(&format!("{}_{}_ping", prefix, player)));
+    let std_dev = LocalDt::from_millis(get_param(&format!("{}_{}_std", prefix, player)));
+    let loss = get_param(&format!("{}_{}_loss", prefix, player)) / 100.0;
 
     // TODO: Allow configuring the two mock channels separately.
     let channel_params = MockChannelParams {
         latency_mean: ping * 0.5,
-        latency_std_dev: LocalDt::zero(),
-        loss: 0.0,
+        latency_std_dev: std_dev * 0.5,
+        loss,
     };
 
     MockSocketParams {
