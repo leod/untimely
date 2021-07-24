@@ -223,7 +223,7 @@ impl Figure for Figure3 {
 
     fn draw(&mut self) -> Result<(), malen::Error> {
         let anja_game = self.users[0].game();
-        let brad_game = self.users[0].game();
+        let brad_game = self.users[1].game();
 
         let games = &[
             (
