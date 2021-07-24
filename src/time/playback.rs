@@ -52,11 +52,15 @@ impl PlaybackClock {
         self.playback_time
     }
 
+    pub fn set_playback_time(&mut self, playback_time: GameTime) {
+        self.playback_time = playback_time;
+    }
+
     pub fn record_stream_time(&mut self, receive_time: LocalTime, stream_time: GameTime) {
         self.stream_samples.record(receive_time, stream_time);
     }
 
-    pub fn advance(&mut self, dt: LocalDt) {
+    pub fn advance(&mut self, dt: LocalDt) -> GameDt {
         let target_time = self.stream_time() - self.params.delay;
         let residual = target_time - self.playback_time;
         let max_stream_time = self
@@ -69,6 +73,8 @@ impl PlaybackClock {
 
         self.playback_time += dt.to_game_dt() * time_warp(residual);
         self.playback_time = self.playback_time.min(max_playback_time);
+
+        residual
     }
 
     pub fn record_metrics(&self, prefix: &str, metrics: &mut Metrics) {

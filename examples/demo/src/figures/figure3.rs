@@ -1,7 +1,7 @@
 use malen::InputState;
 use untimely::{
-    mock::MockNet, DejitterBuffer, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer,
-    PlaybackClockParams, PlayerId, TickNum, TickPlayback,
+    mock::MockNet, DejitterBuffer, GameDt, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer,
+    PlaybackClockParams, PlayerId, TickNum, TickPlayback, TickPlaybackParams,
 };
 
 use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameInput, GameParams};
@@ -101,10 +101,13 @@ impl User {
             id: PlayerId(id),
             name,
             playback: TickPlayback::new(
+                TickPlaybackParams {
+                    playback_clock_params: PlaybackClockParams::for_interpolation(
+                        GameParams::default().dt * NUM_SEND_TICKS as f64,
+                    ),
+                    max_residual: GameDt::from_secs(1.0),
+                },
                 clock,
-                PlaybackClockParams::for_interpolation(
-                    GameParams::default().dt * NUM_SEND_TICKS as f64,
-                ),
             ),
             last_input: GameInput::default(),
         }

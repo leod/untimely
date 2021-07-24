@@ -1,6 +1,12 @@
 use crate::{
-    GameTime, LocalClock, LocalDt, LocalTime, Metrics, PlaybackClock, PlaybackClockParams,
+    GameDt, GameTime, LocalClock, LocalDt, LocalTime, Metrics, PlaybackClock, PlaybackClockParams,
 };
+
+#[derive(Debug, Clone)]
+pub struct TickPlaybackParams {
+    pub playback_clock_params: PlaybackClockParams,
+    pub max_residual: GameDt,
+}
 
 #[derive(Debug, Clone)]
 pub struct Interpolation<'a, T> {
@@ -13,6 +19,7 @@ pub struct Interpolation<'a, T> {
 
 #[derive(Debug, Clone)]
 pub struct TickPlayback<T> {
+    params: TickPlaybackParams,
     local_clock: LocalClock,
     playback_clock: PlaybackClock,
     ticks: Vec<(GameTime, T)>,
@@ -23,10 +30,11 @@ impl<T> TickPlayback<T>
 where
     T: Clone,
 {
-    pub fn new(local_clock: LocalClock, playback_clock_params: PlaybackClockParams) -> Self {
+    pub fn new(params: TickPlaybackParams, local_clock: LocalClock) -> Self {
         Self {
+            params: params.clone(),
             local_clock: local_clock.clone(),
-            playback_clock: PlaybackClock::new(playback_clock_params, local_clock),
+            playback_clock: PlaybackClock::new(params.playback_clock_params, local_clock),
             ticks: Vec::new(),
             current_tick: None,
         }
@@ -102,7 +110,28 @@ where
     }
 
     pub fn advance(&mut self, dt: LocalDt) -> Vec<(GameTime, T)> {
-        self.playback_clock.advance(dt);
+        let residual = self.playback_clock.advance(dt);
+
+        if residual > self.params.max_residual {
+            // We have trailed too far behind the tick stream. This can happen e.g. if there is a
+            // large jump ahead in the local clock, but the local dt was smaller (e.g. because of
+            // clipping the dt to a maximum).
+            //
+            // In this case, we simply jump to the time of the newest received tick.
+            log::info!(
+                "PlaybackClock fell behind target time by {:?} (have {} ticks), jumping ahead",
+                residual,
+                self.ticks.len(),
+            );
+
+            while self.ticks.len() > 1 {
+                self.ticks.pop();
+            }
+
+            if let Some((newest_time, _)) = self.ticks.first() {
+                self.playback_clock.set_playback_time(*newest_time);
+            }
+        }
 
         let mut started_ticks = Vec::new();
 

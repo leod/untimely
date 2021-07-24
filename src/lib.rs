@@ -7,7 +7,7 @@ pub mod metrics;
 pub mod mock;
 
 pub use metrics::Metrics;
-pub use tick::{DejitterBuffer, TickNum, TickPlayback};
+pub use tick::{DejitterBuffer, TickNum, TickPlayback, TickPlaybackParams};
 pub use time::{
     GameDt, GameTime, LocalClock, LocalDt, LocalTime, PeriodicTimer, PlaybackClock,
     PlaybackClockParams, Samples,
