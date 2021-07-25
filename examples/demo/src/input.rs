@@ -1,5 +1,5 @@
 use wasm_bindgen::JsCast;
-use web_sys::HtmlInputElement;
+use web_sys::{HtmlInputElement, Node};
 
 use malen::{InputState, Key};
 
@@ -66,4 +66,17 @@ pub fn get_socket_params(prefix: &str, player: &str) -> MockSocketParams {
         server_out: channel_params.clone(),
         client_out: channel_params,
     }
+}
+
+pub fn is_active(id: &str) -> bool {
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
+
+    let active_element = document.active_element().unwrap();
+    let active_node = active_element.dyn_into::<Node>().unwrap();
+
+    let element = document.get_element_by_id(id).unwrap();
+    let node = element.dyn_into::<Node>().unwrap();
+
+    node.contains(Some(&active_node))
 }

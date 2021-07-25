@@ -4,7 +4,9 @@ use untimely::{
     PlaybackClockParams, PlayerId, TickNum, TickPlayback, TickPlaybackParams,
 };
 
-use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameInput, GameParams};
+use crate::{
+    current_game_input, get_socket_params, is_active, DrawGame, Figure, Game, GameInput, GameParams,
+};
 
 type ServerMsg = (TickNum, Game);
 type ClientMsg = (TickNum, GameInput);
@@ -207,6 +209,10 @@ impl Figure3 {
 impl Figure for Figure3 {
     fn update(&mut self, time: LocalTime) {
         self.draw_game.update();
+        if !is_active("figure3") {
+            return;
+        }
+
         self.mock_net
             .set_params(PlayerId(0), get_socket_params("figure3", "anja"));
         self.mock_net
@@ -222,6 +228,10 @@ impl Figure for Figure3 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
+        if !is_active("figure3") {
+            return Ok(());
+        }
+
         let anja_game = self.users[0].game();
         let brad_game = self.users[1].game();
 

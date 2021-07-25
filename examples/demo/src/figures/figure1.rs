@@ -1,6 +1,6 @@
 use untimely::{LocalClock, LocalDt, LocalTime, PeriodicTimer, PlayerId};
 
-use crate::{current_game_input, DrawGame, Figure, Game, GameInput};
+use crate::{current_game_input, is_active, DrawGame, Figure, Game, GameInput};
 
 pub struct Figure1 {
     clock: LocalClock,
@@ -19,7 +19,7 @@ impl Figure1 {
         let game = Game::default();
         let tick_timer = PeriodicTimer::new(game.params.dt.to_local_dt());
 
-        let draw_game = DrawGame::new(&[("figure1", "Anja")], &[])?;
+        let draw_game = DrawGame::new(&[("figure1_anja", "Anja")], &[])?;
 
         Ok(Self {
             game,
@@ -34,11 +34,14 @@ impl Figure1 {
 impl Figure for Figure1 {
     fn update(&mut self, time: LocalTime) {
         self.draw_game.update();
+        if !is_active("figure1") {
+            return;
+        }
 
         let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
         self.tick_timer.advance(dt);
 
-        if self.tick_timer.trigger() {
+        while self.tick_timer.trigger() {
             self.last_input =
                 current_game_input(PlayerId(0), self.game.time, &self.draw_game.input_state(0));
 
@@ -48,6 +51,10 @@ impl Figure for Figure1 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
+        if !is_active("figure1") {
+            return Ok(());
+        }
+
         let games = &[(Some(&self.game), Some(self.last_input.clone()), None)];
         self.draw_game.draw(games)?;
 

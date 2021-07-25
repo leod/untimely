@@ -3,7 +3,9 @@ use untimely::{
     mock::MockNet, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum,
 };
 
-use crate::{current_game_input, get_socket_params, DrawGame, Figure, Game, GameInput, GameParams};
+use crate::{
+    current_game_input, get_socket_params, is_active, DrawGame, Figure, Game, GameInput, GameParams,
+};
 
 type ServerMsg = Game;
 type ClientMsg = GameInput;
@@ -136,6 +138,10 @@ impl Figure2 {
 impl Figure for Figure2 {
     fn update(&mut self, time: LocalTime) {
         self.draw_game.update();
+        if !is_active("figure2") {
+            return;
+        }
+
         self.mock_net
             .set_params(PlayerId(0), get_socket_params("figure2", "anja"));
         self.mock_net
@@ -158,6 +164,10 @@ impl Figure for Figure2 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
+        if !is_active("figure2") {
+            return Ok(());
+        }
+
         let games = &[
             (
                 Some(&self.users[0].latest_server_game),

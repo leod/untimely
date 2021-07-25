@@ -11,7 +11,7 @@ use untimely::LocalTime;
 pub use draw::DrawGame;
 pub use figure::Figure;
 pub use game::{Game, GameInput, GameParams};
-pub use input::{current_game_input, get_socket_params};
+pub use input::{current_game_input, get_socket_params, is_active};
 
 #[wasm_bindgen(start)]
 pub fn main() {

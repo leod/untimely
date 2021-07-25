@@ -33,5 +33,6 @@ features = [
     "Window",
     "Document",
     "Element",
-    "HtmlInputElement"
+    "HtmlInputElement",
+    "Node",
 ]
