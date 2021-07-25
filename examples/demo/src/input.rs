@@ -5,7 +5,7 @@ use malen::{InputState, Key};
 
 use untimely::{
     mock::{MockChannelParams, MockSocketParams},
-    GameTime, LocalDt, PlayerId,
+    GameTime, LocalClock, LocalDt, LocalTime, PlayerId,
 };
 
 use crate::GameInput;
@@ -68,7 +68,13 @@ pub fn get_socket_params(prefix: &str, player: &str) -> MockSocketParams {
     }
 }
 
-pub fn is_active(id: &str) -> bool {
+pub fn is_active(id: &str, clock: &LocalClock) -> bool {
+    if clock.local_time() < LocalTime::from_secs(1.0) {
+        // Let each figure run for a brief duration at the start, so that we
+        // see something in each canvas.
+        return true;
+    }
+
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
 

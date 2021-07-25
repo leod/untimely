@@ -209,7 +209,7 @@ impl Figure3 {
 impl Figure for Figure3 {
     fn update(&mut self, dt: LocalDt) {
         self.draw_game.update();
-        if !is_active("figure3") {
+        if !is_active("figure3", &self.clock) {
             return;
         }
 
@@ -228,7 +228,7 @@ impl Figure for Figure3 {
     }
 
     fn draw(&mut self) -> Result<(), malen::Error> {
-        if !is_active("figure3") {
+        if !is_active("figure3", &self.clock) {
             return Ok(());
         }
 
