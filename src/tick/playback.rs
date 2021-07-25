@@ -118,18 +118,20 @@ where
             // clipping the dt to a maximum).
             //
             // In this case, we simply jump to the time of the newest received tick.
-            log::info!(
-                "PlaybackClock fell behind target time by {:?} (have {} ticks), jumping ahead",
-                residual,
-                self.ticks.len(),
-            );
+            if let Some((newest_time, _)) = self.ticks.first() {
+                log::info!(
+                    "PlaybackClock at {:?} fell behind by {:?} (have {} ticks), jumping ahead to {:?}",
+                    self.playback_clock.playback_time(),
+                    residual,
+                    self.ticks.len(),
+                    newest_time,
+                );
+
+                self.playback_clock.set_playback_time(*newest_time);
+            }
 
             while self.ticks.len() > 1 {
                 self.ticks.pop();
-            }
-
-            if let Some((newest_time, _)) = self.ticks.first() {
-                self.playback_clock.set_playback_time(*newest_time);
             }
         }
 

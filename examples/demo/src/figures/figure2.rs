@@ -1,7 +1,5 @@
 use malen::InputState;
-use untimely::{
-    mock::MockNet, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer, PlayerId, TickNum,
-};
+use untimely::{mock::MockNet, LocalClock, LocalDt, Metrics, PeriodicTimer, PlayerId, TickNum};
 
 use crate::{
     current_game_input, get_socket_params, is_active, DrawGame, Figure, Game, GameInput, GameParams,
@@ -136,7 +134,7 @@ impl Figure2 {
 }
 
 impl Figure for Figure2 {
-    fn update(&mut self, time: LocalTime) {
+    fn update(&mut self, dt: LocalDt) {
         self.draw_game.update();
         if !is_active("figure2") {
             return;
@@ -147,7 +145,7 @@ impl Figure for Figure2 {
         self.mock_net
             .set_params(PlayerId(1), get_socket_params("figure2", "brad"));
 
-        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
+        self.clock.advance(dt);
         self.server.update(dt, &mut self.mock_net);
         for client in &mut self.users {
             client.update(dt, self.draw_game.input_state(0), &mut self.mock_net);

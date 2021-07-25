@@ -1,6 +1,6 @@
 use malen::InputState;
 use untimely::{
-    mock::MockNet, DejitterBuffer, GameDt, LocalClock, LocalDt, LocalTime, Metrics, PeriodicTimer,
+    mock::MockNet, DejitterBuffer, GameDt, LocalClock, LocalDt, Metrics, PeriodicTimer,
     PlaybackClockParams, PlayerId, TickNum, TickPlayback, TickPlaybackParams,
 };
 
@@ -207,7 +207,7 @@ impl Figure3 {
 }
 
 impl Figure for Figure3 {
-    fn update(&mut self, time: LocalTime) {
+    fn update(&mut self, dt: LocalDt) {
         self.draw_game.update();
         if !is_active("figure3") {
             return;
@@ -218,7 +218,7 @@ impl Figure for Figure3 {
         self.mock_net
             .set_params(PlayerId(1), get_socket_params("figure3", "brad"));
 
-        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
+        self.clock.advance(dt);
         self.server.update(dt, &mut self.mock_net);
         for client in &mut self.users {
             client.update(dt, self.draw_game.input_state(0), &mut self.mock_net);

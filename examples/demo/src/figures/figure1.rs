@@ -1,4 +1,4 @@
-use untimely::{LocalClock, LocalDt, LocalTime, PeriodicTimer, PlayerId};
+use untimely::{LocalClock, LocalDt, PeriodicTimer, PlayerId};
 
 use crate::{current_game_input, is_active, DrawGame, Figure, Game, GameInput};
 
@@ -32,13 +32,13 @@ impl Figure1 {
 }
 
 impl Figure for Figure1 {
-    fn update(&mut self, time: LocalTime) {
+    fn update(&mut self, dt: LocalDt) {
         self.draw_game.update();
         if !is_active("figure1") {
             return;
         }
 
-        let dt = self.clock.set_local_time(time).min(LocalDt::from_secs(1.0));
+        self.clock.advance(dt);
         self.tick_timer.advance(dt);
 
         while self.tick_timer.trigger() {

@@ -22,6 +22,10 @@ impl LocalClock {
 
         dt
     }
+
+    pub fn advance(&mut self, dt: LocalDt) {
+        self.local_time.set(self.local_time.get() + dt);
+    }
 }
 
 impl Default for LocalClock {

@@ -283,14 +283,14 @@ impl PlotInstance {
         if let Some(gauge) = metrics.get_gauge("anja_server_delay") {
             lines.push(Line {
                 caption: "delay anja to server".to_string(),
-                color: Color4::new(0.2, 0.8, 0.2, 1.0),
+                color: Color4::new(0.8, 0.1, 0.1, 1.0),
                 points: shift(&gauge.plot_points()),
             });
         }
         if let Some(gauge) = metrics.get_gauge("anja_stream_delay") {
             lines.push(Line {
                 caption: "delay anja to stream".to_string(),
-                color: Color4::new(0.8, 0.8, 0.2, 1.0),
+                color: Color4::new(0.8, 0.4, 0.0, 1.0),
                 points: shift(&gauge.plot_points()),
             });
         }
