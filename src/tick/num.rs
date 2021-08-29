@@ -24,6 +24,14 @@ impl TickNum {
         TickNum(self.0 + 1)
     }
 
+    pub fn pred(self) -> Option<Self> {
+        if self.0 > 0 {
+            Some(TickNum(self.0 + 1))
+        } else {
+            None
+        }
+    }
+
     pub fn to_u64(self) -> u64 {
         self.0
     }
