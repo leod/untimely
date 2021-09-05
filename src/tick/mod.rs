@@ -1,9 +1,9 @@
 mod dejitter;
 mod num;
 mod playback;
-mod prediction;
+mod predict;
 
 pub use dejitter::DejitterBuffer;
 pub use num::{TickNum, TickTime};
 pub use playback::{TickPlayback, TickPlaybackParams};
-pub use prediction::ClientSidePrediction;
+pub use predict::ClientSidePrediction;
